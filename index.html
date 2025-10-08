@@ -1,475 +1,92 @@
 <!DOCTYPE html>
 <html lang="sr">
 <head>
-<meta charset="utf-8">
-<title>3xMeri – Frontend kalkulator elemenata</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  :root { --bg:#0f1117; --panel:#161a22; --ink:#e6e6e6; --muted:#9aa0a6; --accent:#4da3ff; --ok:#49d17d; --warn:#ffb84d; }
-  html,body { background: var(--bg); color: var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans"; margin:0; }
-  header { padding: 16px 20px; background: var(--panel); position: sticky; top:0; z-index:5; border-bottom: 1px solid #222833;}
-  h1 { font-size: 18px; margin:0; letter-spacing:.2px; }
-  main { padding: 18px; display: grid; gap: 16px; }
-  .row { display: grid; grid-template-columns: 1fr; gap: 16px; }
-  @media (min-width: 1000px) {
-    .row { grid-template-columns: 1.2fr 1fr; align-items: start; }
-  }
-  .card { background: var(--panel); border: 1px solid #222833; border-radius: 10px; padding: 14px; }
-  .card h2 { font-size: 16px; margin: 0 0 8px; }
-  .card h3 { font-size: 14px; margin: 12px 0 6px; color: var(--muted); }
-  textarea { width: 100%; height: 260px; background: #0b0e14; color: var(--ink); border: 1px solid #222833; border-radius: 8px; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-  button { background: var(--accent); color: #00152a; border: none; border-radius: 8px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
-  button.ghost { background: transparent; color: var(--ink); border: 1px solid #2a3241; }
-  .flex { display:flex; gap:10px; flex-wrap: wrap; align-items: center; }
-  .pill { padding: 2px 8px; border-radius: 99px; border: 1px solid #2a3241; color: var(--muted); font-size: 12px; }
-  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-  .el { background:#0b0e14; border:1px solid #222833; border-radius: 8px; padding:10px; }
-  .el h4 { margin:0 0 8px; font-size: 14px; }
-  .svgwrap { background:#02040a; border: 1px dashed #2a3241; border-radius: 6px; padding: 6px; display:flex; justify-content:center; }
-  .notes { color: var(--warn); font-size: 12px; margin-top:6px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #262d3a; font-size: 13px; }
-  th { color: #c9ced6; }
-  .right { text-align: right; }
-  .small { font-size: 12px; color: var(--muted); }
-  .success { color: var(--ok); }
-  .kbd { background:#10141e; border:1px solid #283047; border-radius:4px; padding:2px 6px; font-family: ui-monospace, monospace; }
-  .footer { color: var(--muted); font-size:12px; padding: 8px 0 0; }
-</style>
+  <meta charset="utf-8">
+  <title>3xMeri – Frontend kalkulator elemenata</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <style>
+    :root { --bg:#0f1117; --panel:#161a22; --ink:#e6e6e6; --muted:#9aa0a6; --accent:#4da3ff; --ok:#49d17d; --warn:#ffb84d; }
+    html,body { background: var(--bg); color: var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans"; margin:0; }
+    header { padding: 16px 20px; background: var(--panel); position: sticky; top:0; z-index:5; border-bottom: 1px solid #222833;}
+    h1 { font-size: 18px; margin:0; letter-spacing:.2px; }
+    main { padding: 18px; display: grid; gap: 16px; }
+    .row { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 1000px) { .row { grid-template-columns: 1.2fr 1fr; align-items: start; } }
+    .card { background: var(--panel); border: 1px solid #222833; border-radius: 10px; padding: 14px; }
+    .card h2 { font-size: 16px; margin: 0 0 8px; }
+    .card h3 { font-size: 14px; margin: 12px 0 6px; color: var(--muted); }
+    textarea { width: 100%; height: 260px; background: #0b0e14; color: var(--ink); border: 1px solid #222833; border-radius: 8px; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    button { background: var(--accent); color: #00152a; border: none; border-radius: 8px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
+    button.ghost { background: transparent; color: var(--ink); border: 1px solid #2a3241; }
+    .flex { display:flex; gap:10px; flex-wrap: wrap; align-items: center; }
+    .pill { padding: 2px 8px; border-radius: 99px; border: 1px solid #2a3241; color: var(--muted); font-size: 12px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .el { background:#0b0e14; border:1px solid #222833; border-radius: 8px; padding:10px; }
+    .el h4 { margin:0 0 8px; font-size: 14px; }
+    .svgwrap { background:#02040a; border: 1px dashed #2a3241; border-radius: 6px; padding: 6px; display:flex; justify-content:center; }
+    .notes { color: var(--warn); font-size: 12px; margin-top:6px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #262d3a; font-size: 13px; }
+    th { color: #c9ced6; }
+    .right { text-align: right; }
+    .small { font-size: 12px; color: var(--muted); }
+    .success { color: var(--ok); }
+    .kbd { background:#10141e; border:1px solid #283047; border-radius:4px; padding:2px 6px; font-family: ui-monospace, monospace; }
+    .footer { color: var(--muted); font-size:12px; padding: 8px 0 0; }
+  </style>
 </head>
 <body>
-<header>
-  <h1>3xMeri – Kalkulator frontova i BOM (GitHub Pages)</h1>
-</header>
+<header><h1>3xMeri – Kalkulator frontova i BOM (GitHub Pages)</h1></header>
 <main>
   <div class="row">
     <div class="card">
       <h2>1) JSON konfiguracija (projekat + porudžbina)</h2>
-      <p class="small">Uredi i klikni <span class="kbd">Recompute</span>. Sva izračunavanja i skice se rade lokalno u tvom browseru.</p>
+      <p class="small">Uredi i klikni <span class="kbd">Recompute</span>.</p>
       <textarea id="jsonInput">{
-  "Kitchen": {
-    "H_total": 900,
-    "H_plinth": 110,
-    "T_top": 38,
-    "Gap": 2,
-    "FrontGrid": [140, 200, 280, 300],
-    "DatumFirstDrawer": 140,
-    "Defaults": {
-      "CarcassDepth": 560,
-      "SideThickness": 18,
-      "BackThickness": 3
-    }
-  },
+  "Kitchen": {"H_total": 900,"H_plinth": 110,"T_top": 38,"Gap": 2,"FrontGrid": [140, 200, 280, 300],"DatumFirstDrawer": 140,"Defaults": {"CarcassDepth": 560,"SideThickness": 18,"BackThickness": 3}},
   "Order": [
-    { "id": "E1", "type": "sink_1door",        "width": 600, "depth": 560 },
-    { "id": "E2", "type": "dishwasher_60",     "width": 600, "depth": 560, "appliance": { "nicheMin": 815 } },
-    { "id": "E3", "type": "oven_housing",      "width": 600, "depth": 560, "appliance": { "ovenNiche": 595 } },
-    { "id": "E4", "type": "drawer_3",          "width": 600, "depth": 560, "drawerHeights": [140, 200, null] },
-    { "id": "E5", "type": "combo_drawer_door", "width": 400, "depth": 560 }
+    {"id":"E1","type":"sink_1door","width":600,"depth":560},
+    {"id":"E2","type":"dishwasher_60","width":600,"depth":560,"appliance":{"nicheMin":815}},
+    {"id":"E3","type":"oven_housing","width":600,"depth":560,"appliance":{"ovenNiche":595}},
+    {"id":"E4","type":"drawer_3","width":600,"depth":560,"drawerHeights":[140,200,null]},
+    {"id":"E5","type":"combo_drawer_door","width":400,"depth":560}
   ]
 }</textarea>
       <div class="flex" style="margin-top:10px">
         <button id="btnRun">Recompute</button>
         <button id="btnReset" class="ghost">Reset na primer</button>
       </div>
-      <div id="msg" class="small"></div>
+      <div id="msg" class="small" role="status"></div>
     </div>
-
     <div class="card">
       <h2>2) Globalni parametri</h2>
       <div id="globals" class="flex"></div>
-      <div class="footer">Napomena: <span class="kbd">H_carcass = H_total − H_plinth − T_top</span> i važi za sve donje elemente.</div>
+      <div class="footer">Napomena: <span class="kbd">H_carcass = H_total − H_plinth − T_top</span></div>
     </div>
   </div>
 
-  <div class="card">
-    <h2>3) Skice frontova (poravnanje „prve fioke“ i ukupne visine)</h2>
-    <div id="elements" class="grid"></div>
-  </div>
+  <div class="card"><h2>3) Skice frontova</h2><div id="elements" class="grid"></div></div>
 
   <div class="card">
-    <h2>4) BOM (krojne liste frontova + korpusa) – agregat</h2>
+    <h2>4) BOM – agregat</h2>
     <div class="flex" style="justify-content: space-between; gap:8px; margin-bottom:8px;">
-      <div class="small">Dimenzije u mm. Širina fronta = širina elementa − 4 mm (po 2 mm luft levo/desno).</div>
-      <div class="flex">
-        <button id="btnCsv">Preuzmi CSV</button>
-        <a id="csvLink" class="ghost" href="#" target="_blank" style="display:inline-block; text-decoration:none; border:1px solid #2a3241; padding:10px 14px; border-radius:8px;">Otvori CSV</a>
-      </div>
+      <div class="small">Širina fronta = širina elementa − 4 mm</div>
+      <div class="flex"><button id="btnCsv">Preuzmi CSV</button>
+      <a id="csvLink" class="ghost" href="#" target="_blank" style="display:inline-block; text-decoration:none; border:1px solid #2a3241; padding:10px 14px; border-radius:8px;">Otvori CSV</a></div>
     </div>
-    <table id="bomTable">
-      <thead>
-        <tr>
-          <th>ItemID</th><th>Part</th><th>Qty</th><th>W</th><th>H</th><th>Th</th><th>Edge</th><th>Material</th><th>Notes</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <table id="bomTable"><thead><tr><th>ItemID</th><th>Part</th><th>Qty</th><th>W</th><th>H</th><th>Th</th><th>Edge</th><th>Material</th><th>Notes</th></tr></thead><tbody></tbody></table>
   </div>
 
   <div class="card">
-    <h2>5) CSV pregled (ono što će biti preuzeto)</h2>
-    <div class="small" style="margin-bottom:8px;">Tabela ispod prikazuje <b>identične</b> redove koji idu u CSV fajl (sa istim kolonama i redosledom). Automatski se osvežava posle <span class="kbd">Recompute</span>.</div>
-    <div class="flex" style="justify-content: flex-end; margin-bottom:8px; gap:8px;">
-      <button id="btnCopyCsv" class="ghost">Kopiraj CSV</button>
-    </div>
-    <table id="csvPreviewTable">
-      <thead>
-        <tr>
-          <th>ItemID</th><th>Part</th><th>Qty</th><th>W</th><th>H</th><th>Th</th><th>Edge</th><th>Material</th><th>Notes</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <h2>5) CSV pregled</h2>
+    <div class="flex" style="justify-content: flex-end; margin-bottom:8px; gap:8px;"><button id="btnCopyCsv" class="ghost">Kopiraj CSV</button></div>
+    <table id="csvPreviewTable"><thead><tr><th>ItemID</th><th>Part</th><th>Qty</th><th>W</th><th>H</th><th>Th</th><th>Edge</th><th>Material</th><th>Notes</th></tr></thead><tbody></tbody></table>
   </div>
 
-  <div class="card">
-    <h3>RAW CSV (copy & paste fallback)</h3>
-    <div class="small" style="margin-bottom:6px;">Dug pritisak unutar polja → Select All → Copy. Ovo uvek radi i u zatvorenim pregledačima.</div>
-    <textarea id="csvRaw" rows="10" readonly></textarea>
-  </div>
+  <div class="card"><h3>RAW CSV</h3><textarea id="csvRaw" rows="10" readonly></textarea></div>
 
-  <div class="card">
-    <h2>6) Validacije</h2>
-    <div id="valid" class="small"></div>
-  </div>
+  <div class="card"><h2>6) Validacije</h2><div id="valid" class="small"></div></div>
 </main>
-
-<script>
-// ===== Logic: computations =====
-function computeHCarcass(k) { return k.H_total - k.H_plinth - k.T_top; }
-
-function solveItem(k, it) {
-  const H = computeHCarcass(k);
-  const gap = k.Gap;
-  const FIRST = k.DatumFirstDrawer;
-  const res = { id: it.id, H_carcass: H, fronts: [], gaps: [], notes: [] };
-  const pushGap = () => res.gaps.push(gap);
-
-  switch (it.type) {
-    case "sink_1door": {
-      const f1 = FIRST;
-      const f2 = H - f1 - gap;
-      res.fronts.push(f1); pushGap(); res.fronts.push(f2);
-      break;
-    }
-    case "combo_drawer_door": {
-      const f1 = FIRST;
-      const f2 = H - f1 - gap;
-      res.fronts.push(f1); pushGap(); res.fronts.push(f2);
-      break;
-    }
-    case "dishwasher_60": {
-      const niche = it.appliance?.nicheMin ?? 815;
-      if (niche > H) res.notes.push(\`Upozorenje: nicheMin \${niche}mm > H_carcass \${H}mm.\`);
-      res.fronts.push(H);
-      break;
-    }
-    case "oven_housing": {
-      const ovenNiche = it.appliance?.ovenNiche ?? 595;
-      const f1 = FIRST;
-      const rest = H - f1 - gap;
-      let topTrim = Math.max(0, rest - ovenNiche);
-      res.fronts.push(f1); pushGap(); res.fronts.push(ovenNiche);
-      if (topTrim > 0) { pushGap(); res.fronts.push(topTrim); }
-      else res.notes.push("Nema top trim panela ili je minimalan; proveri Gap i rernu.");
-      break;
-    }
-    case "drawer_3": {
-      const second = (it.drawerHeights && it.drawerHeights[1] != null) ? it.drawerHeights[1] : 200;
-      const third = H - FIRST - second - 2*gap;
-      res.fronts.push(FIRST); pushGap(); res.fronts.push(second); pushGap(); res.fronts.push(third);
-      break;
-    }
-    default:
-      res.notes.push("Nepoznat tip: " + it.type);
-  }
-
-  const sumFronts = res.fronts.reduce((a,b)=>a+b,0);
-  const sumGaps = res.gaps.reduce((a,b)=>a+b,0);
-  const diff = H - (sumFronts + sumGaps);
-  if (Math.abs(diff) > 0.5) res.notes.push(\`Neusaglašeno: diff=\${diff.toFixed(1)}mm\`);
-
-  return res;
-}
-
-function solveOrder(cfg, order) { return order.map(it => solveItem(cfg.Kitchen, it)); }
-
-// ===== Sketch: SVG render =====
-function renderElementSVG(res, widthPx=120, pxPerMm=0.35) {
-  const totalPxH = res.H_carcass * pxPerMm;
-  let y = 0;
-  let svg = \`<svg width="\${widthPx}" height="\${Math.round(totalPxH)}" viewBox="0 0 \${widthPx} \${Math.round(totalPxH)}" xmlns="http://www.w3.org/2000/svg">\`;
-  res.fronts.forEach((h, i) => {
-    const rectH = h * pxPerMm;
-    svg += \`<rect x="0" y="\${y}" width="\${widthPx}" height="\${rectH}" fill="white" stroke="black"/>\`;
-    svg += \`<text x="\${widthPx/2}" y="\${y + rectH/2}" font-size="10" text-anchor="middle" dominant-baseline="middle">\${Math.round(h)}mm</text>\`;
-    y += rectH;
-    if (i < res.gaps.length) {
-      const gapH = res.gaps[i] * pxPerMm;
-      svg += \`<rect x="\${widthPx*0.1}" y="\${y}" width="\${widthPx*0.8}" height="\${gapH}" fill="lightgray" />\`;
-      y += gapH;
-    }
-  });
-  svg += \`</svg>\`;
-  return svg;
-}
-
-// ===== BOM generation =====
-function bomForItem(cfg, it, solved) {
-  const items = [];
-  const matFront = "MDF_Lak";
-  const thFront = 18;
-  const edgeFront = "2L+2S";
-  const wFront = (it.width ?? 600) - 4;
-
-  solved.fronts.forEach((h, idx) => {
-    items.push({ itemId: it.id, part: \`FRONT-\${idx+1}\`, qty: 1, w: wFront, h: Math.round(h), th: thFront, edge: edgeFront, material: matFront, notes: "" });
-  });
-
-  const t = cfg.Kitchen.Defaults.SideThickness;
-  const d = it.depth ?? cfg.Kitchen.Defaults.CarcassDepth;
-  const H = solved.H_carcass;
-
-  items.push({ itemId: it.id, part: "BOK-L", qty: 1, w: d, h: H, th: t, edge: "2L", material: "PB18", notes: "" });
-  items.push({ itemId: it.id, part: "BOK-R", qty: 1, w: d, h: H, th: t, edge: "2L", material: "PB18", notes: "" });
-
-  const netW = (it.width ?? 600) - 2*t;
-  items.push({ itemId: it.id, part: "DNO", qty: 1, w: d, h: netW, th: t, edge: "1L", material: "PB18", notes: "orijentacija: dubina x širina" });
-  items.push({ itemId: it.id, part: "RAIL-TOP", qty: 1, w: netW, h: 100, th: t, edge: "1L", material: "PB18", notes: "" });
-  items.push({ itemId: it.id, part: "RAIL-BOT", qty: 1, w: netW, h: 100, th: t, edge: "1L", material: "PB18", notes: "" });
-
-  items.push({ itemId: it.id, part: "LEĐA", qty: 1, w: netW, h: H - 50, th: cfg.Kitchen.Defaults.BackThickness, edge: "-", material: "HDF3", notes: "" });
-
-  switch (it.type) {
-    case "drawer_3":
-      items.push({ itemId: it.id, part: "OKOV", qty: 3, w: "-", h: "-", th: "-", edge: "-", material: "KLIZAČ", notes: "3x set klizača (po izboru)" });
-      break;
-    case "sink_1door":
-      items.push({ itemId: it.id, part: "OKOV", qty: 2, w: "-", h: "-", th: "-", edge: "-", material: "ŠARKE", notes: "2–3 šarke" });
-      break;
-    case "combo_drawer_door":
-      items.push({ itemId: it.id, part: "OKOV", qty: 1, w: "-", h: "-", th: "-", edge: "-", material: "KLIZAČ", notes: "1x set klizača + 2–3 šarke" });
-      break;
-    case "oven_housing":
-      items.push({ itemId: it.id, part: "OKOV", qty: 1, w: "-", h: "-", th: "-", edge: "-", material: "SET", notes: "Nosači rerne + ventilacioni prorezi" });
-      break;
-    case "dishwasher_60":
-      items.push({ itemId: it.id, part: "OKOV", qty: 1, w: "-", h: "-", th: "-", edge: "-", material: "SET", notes: "Adapter/šrafovi po specifikaciji mašine" });
-      break;
-  }
-
-  return items;
-}
-
-function aggregateBOM(lines) {
-  const keyOf = r => [r.part, r.w, r.h, r.th, r.edge, r.material, r.notes].join("|");
-  const map = new Map();
-  for (const r of lines) {
-    const key = keyOf(r);
-    const prev = map.get(key);
-    if (prev) prev.qty += r.qty;
-    else map.set(key, { ...r });
-  }
-  return Array.from(map.values());
-}
-
-function toCSV(rows) {
-  const esc = v => {
-    if (v == null) return "";
-    const s = String(v);
-    return /[",\n;]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
-  };
-  const headers = ["ItemID","Part","Qty","W","H","Th","Edge","Material","Notes"];
-  const lines = [headers.join(";")];
-  for (const r of rows) {
-    lines.push([r.itemId, r.part, r.qty, r.w, r.h, r.th, r.edge, r.material, r.notes].map(esc).join(";"));
-  }
-  return lines.join("\\n");
-}
-
-// ===== CSV preview render & clipboard =====
-function renderCSVPreview(rows) {
-  const tbody = document.querySelector("#csvPreviewTable tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-  const valsOf = r => [r.itemId, r.part, r.qty, r.w, r.h, r.th, r.edge, r.material, r.notes];
-  for (const r of rows) {
-    const tr = document.createElement("tr");
-    valsOf(r).forEach((v, i) => {
-      const td = document.createElement("td");
-      td.textContent = (v == null ? "" : String(v));
-      if (i>=2 && i<=5) td.className = "right";
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  }
-}
-
-function wireCopyCsvButton() {
-  const btn = document.getElementById("btnCopyCsv");
-  if (!btn) return;
-  btn.addEventListener("click", async () => {
-    try {
-      const rows = window.__lastAggBOM || [];
-      const csv = toCSV(rows);
-      await navigator.clipboard.writeText(csv);
-      btn.textContent = "Kopirano ✓";
-      setTimeout(() => btn.textContent = "Kopiraj CSV", 1500);
-    } catch (e) {
-      console.warn("Clipboard failed:", e);
-      btn.textContent = "Greška pri kopiranju";
-      setTimeout(() => btn.textContent = "Kopiraj CSV", 1500);
-    }
-  });
-}
-
-// ===== Mobile-aware CSV download =====
-function isLikelyIOS() {
-  return (/iP(ad|hone|od)/.test(navigator.platform) ||
-         (navigator.userAgent.includes("Mac") && "ontouchend" in document));
-}
-
-async function downloadCSVMobileAware(filename, csv) {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const file = new File([blob], filename, { type: "text/csv" });
-  try {
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: filename, text: "3xMeri BOM CSV" });
-      return;
-    }
-  } catch (err) { console.warn("navigator.share failed:", err); }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.rel = "noopener"; a.target = "_blank";
-  document.body.appendChild(a); a.click(); a.remove();
-  if (isLikelyIOS()) {
-    setTimeout(() => {
-      try {
-        const reader = new FileReader();
-        reader.onload = () => { window.location.href = reader.result; };
-        reader.readAsDataURL(blob);
-      } catch (e) {
-        console.warn("iOS dataURL fallback failed:", e);
-        window.open(url, "_blank");
-      } finally {
-        setTimeout(() => URL.revokeObjectURL(url), 4000);
-      }
-    }, 300);
-  } else {
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
-}
-
-// ===== UI wiring =====
-const $ = sel => document.querySelector(sel);
-
-function renderGlobals(k) {
-  const Hc = computeHCarcass(k);
-  $("#globals").innerHTML = [
-    \`<span class="pill">H_total: <b>\${k.H_total}</b></span>\`,
-    \`<span class="pill">H_plinth: <b>\${k.H_plinth}</b></span>\`,
-    \`<span class="pill">T_top: <b>\${k.T_top}</b></span>\`,
-    \`<span class="pill success">H_carcass: <b>\${Hc}</b></span>\`,
-    \`<span class="pill">Gap: <b>\${k.Gap}</b></span>\`,
-    \`<span class="pill">DatumFirstDrawer: <b>\${k.DatumFirstDrawer}</b></span>\`
-  ].join(" ");
-}
-
-function renderElements(cfg, order, solved) {
-  const host = $("#elements");
-  host.innerHTML = "";
-  solved.forEach((res, idx) => {
-    const it = order[idx];
-    const div = document.createElement("div");
-    div.className = "el";
-    div.innerHTML = \`
-      <h4>\${it.id} – \${it.type} (\${it.width}×\${it.depth})</h4>
-      <div class="svgwrap">\${renderElementSVG(res, 120, 0.35)}</div>
-      \${res.notes.length ? '<div class="notes">'+res.notes.map(n=>'- '+n).join('<br>')+'</div>' : ''}
-    \`;
-    host.appendChild(div);
-  });
-}
-
-function renderBOM(aggRows) {
-  const tbody = $("#bomTable tbody");
-  tbody.innerHTML = "";
-  for (const r of aggRows) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = \`
-      <td>\${r.itemId ?? "-"}</td>
-      <td>\${r.part}</td>
-      <td class="right">\${r.qty}</td>
-      <td class="right">\${r.w}</td>
-      <td class="right">\${r.h}</td>
-      <td class="right">\${r.th}</td>
-      <td>\${r.edge}</td>
-      <td>\${r.material}</td>
-      <td>\${r.notes}</td>
-    \`;
-    tbody.appendChild(tr);
-  }
-}
-
-function recompute() {
-  $("#msg").textContent = "";
-  try {
-    const data = JSON.parse($("#jsonInput").value);
-    const cfg = data;
-    renderGlobals(cfg.Kitchen);
-    const solved = solveOrder(cfg, data.Order);
-
-    renderElements(cfg, data.Order, solved);
-
-    let all = [];
-    data.Order.forEach((it, i) => { all = all.concat(bomForItem(cfg, it, solved[i])); });
-    const agg = aggregateBOM(all);
-    renderBOM(agg);
-
-    // CSV preview + copy
-    renderCSVPreview(agg);
-    wireCopyCsvButton();
-
-    // Update CSV link (data: URL) and RAW textarea
-    try {
-      const csv = toCSV(agg);
-      const a = document.getElementById("csvLink");
-      if (a) { a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); a.download = "3xmeri_BOM.csv"; }
-      const raw = document.getElementById("csvRaw");
-      if (raw) raw.value = csv;
-    } catch(e) { console.warn("CSV link update failed", e); }
-
-    // Validations
-    const val = [];
-    const uniqueH = new Set(solved.map(s => s.H_carcass));
-    if (uniqueH.size === 1) val.push("✔ Svi elementi imaju isti H_carcass.");
-    else val.push("⚠ Različite visine korpusa.");
-    const allNotes = solved.flatMap(s => s.notes.map(n => s.id + ": " + n));
-    if (allNotes.length) val.push("⚠ Napomene:<br>" + allNotes.map(n => "&nbsp;&nbsp;• " + n).join("<br>"));
-    document.getElementById("valid").innerHTML = val.join("<br>");
-
-    window.__lastAggBOM = agg;
-  } catch (e) {
-    console.error(e);
-    $("#msg").textContent = "Greška u JSON-u: " + e.message;
-  }
-}
-
-// Buttons
-document.getElementById("btnRun").addEventListener("click", recompute);
-document.getElementById("btnReset").addEventListener("click", () => {
-  const ta = document.getElementById("jsonInput");
-  ta.value = ta.defaultValue;
-  recompute();
-});
-document.getElementById("btnCsv").addEventListener("click", async () => {
-  const rows = window.__lastAggBOM || [];
-  const csv = toCSV(rows);
-  await downloadCSVMobileAware("3xmeri_BOM.csv", csv);
-});
-
-// Boot
-recompute();
-</script>
-</body>
-</html>
+<script src="app.js"></script>
+</body></html>
