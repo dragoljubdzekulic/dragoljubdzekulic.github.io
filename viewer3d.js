@@ -1,6 +1,6 @@
 // viewer3d.js — ES module
-import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js';
-import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+import * as THREE from 'https://unpkg.com/three@0.159.0/build/three.module.js?module';
+import { OrbitControls } from 'https://unpkg.com/three@0.159.0/examples/jsm/controls/OrbitControls.js?module';
 
 let scene, camera, renderer, controls, root;
 const MM = 0.002; // 1 mm = 0.002 m
@@ -48,7 +48,6 @@ function init3D(container) {
 
 function rebuildKitchen(cfg, order, solved) {
   if (!root) return;
-  // clear previous
   while (root.children.length) root.remove(root.children[0]);
 
   const matCarcass = new THREE.MeshStandardMaterial({ color: 0x8a8f9a, metalness: 0.1, roughness: 0.9 });
@@ -67,12 +66,10 @@ function rebuildKitchen(cfg, order, solved) {
     g.position.set(xCursor, 0, 0);
     root.add(g);
 
-    // Carcass
     const carcass = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), matCarcass);
     carcass.position.set(W/2, H/2, D/2);
     g.add(carcass);
 
-    // Fronts
     let y = 0;
     (sol?.fronts || []).forEach((fh, i) => {
       const fH = fh * MM;
@@ -83,11 +80,10 @@ function rebuildKitchen(cfg, order, solved) {
       if (i < (sol.gaps?.length || 0)) y += gapMM;
     });
 
-    xCursor += W + 0.03; // 30 mm spacing
+    xCursor += W + 0.03;
   });
 }
 
-// Wire up with app.js after DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
   const host = document.getElementById('viewer3d');
   if (!host) return;
@@ -95,7 +91,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const out = window.recompute && window.recompute();
   if (out) rebuildKitchen(out.cfg, out.order, out.solved);
 
-  // Monkey-patch recompute to also refresh 3D
   const orig = window.recompute;
   window.recompute = function(){
     const res = orig ? orig() : null;
