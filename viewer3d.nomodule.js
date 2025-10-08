@@ -1,4 +1,4 @@
-// viewer3d.nomodule.js — robust fallback using global THREE (no ES modules)
+// viewer3d.nomodule.js — mobile-friendly gestures (no ES modules)
 (function(){
   if (!window.THREE) { console.error("THREE nije učitan."); return; }
   const THREE = window.THREE;
@@ -9,13 +9,12 @@
 
   function init3D(container) {
     scene = new THREE.Scene();
-    // malo svetlija pozadina nego ranije
     scene.background = new THREE.Color(0x141922);
 
     const w = Math.max(10, container.clientWidth);
     const h = Math.max(10, container.clientHeight);
     camera = new THREE.PerspectiveCamera(50, w/h, 0.001, 100);
-    camera.position.set(1.6, 1.0, 1.8);
+    camera.position.set(2.2, 1.4, 2.4);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio || 1);
@@ -23,19 +22,27 @@
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
+    // 🟢 Ključno: spreči scroll stranice preko canvasa (iOS/Android)
+    renderer.domElement.style.touchAction = 'none';  // moderne brauzere
+    ['touchstart','touchmove','touchend','touchcancel'].forEach(evt => {
+      renderer.domElement.addEventListener(evt, function(e){ e.preventDefault(); }, { passive: false });
+    });
+
     if (OrbitControlsCtor) {
       controls = new OrbitControlsCtor(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.06;
+      controls.enableZoom = true;
+      controls.enablePan = true;
+      controls.update();
     }
 
-    // svetla: ambijentalno + direkciono
+    // svetla
     scene.add(new THREE.AmbientLight(0xffffff, 0.55));
     const dir = new THREE.DirectionalLight(0xffffff, 0.7);
     dir.position.set(2,3,2);
     scene.add(dir);
 
-    // pomoćna mreža da odmah vidiš da renderer radi
     const grid = new THREE.GridHelper(4, 20, 0x666a73, 0x2a3040);
     grid.position.y = 0;
     scene.add(grid);
@@ -64,22 +71,17 @@
     const center = new THREE.Vector3();
     box.getSize(size);
     box.getCenter(center);
-
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = camera.fov * (Math.PI/180);
     let dist = (maxDim/2) / Math.tan(fov/2);
-    dist *= 1.35; // padding
-
+    dist *= 1.6;
     const dir = new THREE.Vector3(1, 0.6, 1).normalize();
     const newPos = center.clone().add(dir.multiplyScalar(dist));
     camera.position.copy(newPos);
     camera.near = Math.max(0.001, dist/50);
     camera.far = dist*50;
     camera.updateProjectionMatrix();
-    if (controls) {
-      controls.target.copy(center);
-      controls.update();
-    }
+    if (controls) { controls.target.copy(center); controls.update(); }
   }
 
   function rebuildKitchen(cfg, order, solved) {
@@ -102,12 +104,10 @@
       g.position.set(xCursor, 0, 0);
       root.add(g);
 
-      // Korpus
       const carcass = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), matCarcass);
       carcass.position.set(W/2, H/2, D/2);
       g.add(carcass);
 
-      // Frontovi
       let y = 0;
       if (sol && Array.isArray(sol.fronts)) {
         sol.fronts.forEach((fh, i) => {
@@ -120,7 +120,7 @@
         });
       }
 
-      xCursor += W + 0.03; // 30 mm raster
+      xCursor += W + 0.03;
     });
 
     fitCameraToRoot();
@@ -130,7 +130,6 @@
     const host = document.getElementById('viewer3d');
     if (!host) return;
     init3D(host);
-
     const out = window.recompute && window.recompute();
     if (out) rebuildKitchen(out.cfg, out.order, out.solved);
 
