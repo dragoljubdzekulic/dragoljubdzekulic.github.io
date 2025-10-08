@@ -2,10 +2,10 @@
 <html lang="sr">
 <head>
   <meta charset="utf-8">
-  <title>3xMeri – Frontend kalkulator elemenata</title>
+  <title>3xMeri – Frontend kalkulator elemenata (verzija x)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Allow loading ES modules from unpkg for Three.js -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' https://unpkg.com; connect-src 'self' https://unpkg.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <!-- Allow unpkg scripts (non-module) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://unpkg.com data:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' https://unpkg.com; connect-src 'self' https://unpkg.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <style>
     :root { --bg:#0f1117; --panel:#161a22; --ink:#e6e6e6; --muted:#9aa0a6; --accent:#4da3ff; --ok:#49d17d; --warn:#ffb84d; }
     html,body { background: var(--bg); color: var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans"; margin:0; }
@@ -39,7 +39,7 @@
 </head>
 <body>
 <header>
-  <h1>3xMeri – Kalkulator frontova i BOM (GitHub Pages + 3D)</h1>
+  <h1>3xMeri – Kalkulator frontova i BOM (GitHub Pages + 3D) – verzija x</h1>
 </header>
 <main>
   <div class="row">
@@ -134,7 +134,12 @@
 
 <!-- App logic -->
 <script src="app.js"></script>
-<!-- 3D viewer module (imports Three.js from unpkg) -->
-<script type="module" src="viewer3d.js"></script>
+
+<!-- Three.js (global) + OrbitControls UMD iz unpkg -->
+<script src="https://unpkg.com/three@0.159.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.159.0/examples/js/controls/OrbitControls.js"></script>
+
+<!-- Naš 3D viewer koji koristi globalni THREE -->
+<script src="viewer3d.nomodule.js"></script>
 </body>
 </html>
