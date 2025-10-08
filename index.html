@@ -132,14 +132,14 @@
   </div>
 </main>
 
-<!-- App logic -->
-<script src="app.js"></script>
+<!-- App logic mora PRVO -->
+<script src="app.js?v=3"></script>
 
-<!-- Three.js (global) + OrbitControls UMD iz unpkg -->
+<!-- Three + OrbitControls sa CDN-a -->
 <script src="https://unpkg.com/three@0.159.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.159.0/examples/js/controls/OrbitControls.js"></script>
 
-<!-- Naš 3D viewer koji koristi globalni THREE -->
-<script src="viewer3d.nomodule.js"></script>
+<!-- Naš 3D viewer – NOVO IME da probije keš -->
+<script src="viewer3d.nomodule.v3.js"></script>
 </body>
 </html>
