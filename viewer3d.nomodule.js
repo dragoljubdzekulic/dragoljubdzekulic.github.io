@@ -1,59 +1,93 @@
-// viewer3d.nomodule.js — koristi globalni THREE i OrbitControls (UMD)
+// viewer3d.nomodule.js — robust fallback using global THREE (no ES modules)
 (function(){
   if (!window.THREE) { console.error("THREE nije učitan."); return; }
   const THREE = window.THREE;
-  const OrbitControls = THREE.OrbitControls || window.OrbitControls;
+  const OrbitControlsCtor = THREE.OrbitControls || window.OrbitControls;
 
   let scene, camera, renderer, controls, root;
   const MM = 0.002; // 1 mm = 0.002 m
 
   function init3D(container) {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0e14);
+    // malo svetlija pozadina nego ranije
+    scene.background = new THREE.Color(0x141922);
 
-    const w = container.clientWidth, h = container.clientHeight;
-    camera = new THREE.PerspectiveCamera(45, w/h, 0.01, 100);
-    camera.position.set(1.2, 0.8, 1.4);
+    const w = Math.max(10, container.clientWidth);
+    const h = Math.max(10, container.clientHeight);
+    camera = new THREE.PerspectiveCamera(50, w/h, 0.001, 100);
+    camera.position.set(1.6, 1.0, 1.8);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(w, h);
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
 
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 0.35, 0);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.update();
+    if (OrbitControlsCtor) {
+      controls = new OrbitControlsCtor(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+    }
 
-    const light1 = new THREE.HemisphereLight(0xffffff, 0x333333, 0.9);
-    scene.add(light1);
-    const light2 = new THREE.DirectionalLight(0xffffff, 0.6);
-    light2.position.set(1,2,1);
-    scene.add(light2);
+    // svetla: ambijentalno + direkciono
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+    dir.position.set(2,3,2);
+    scene.add(dir);
+
+    // pomoćna mreža da odmah vidiš da renderer radi
+    const grid = new THREE.GridHelper(4, 20, 0x666a73, 0x2a3040);
+    grid.position.y = 0;
+    scene.add(grid);
 
     root = new THREE.Group();
     scene.add(root);
 
     window.addEventListener('resize', () => {
-      const w2 = container.clientWidth, h2 = container.clientHeight;
+      const w2 = Math.max(10, container.clientWidth);
+      const h2 = Math.max(10, container.clientHeight);
       camera.aspect = w2/h2; camera.updateProjectionMatrix();
       renderer.setSize(w2, h2);
     });
 
     (function loop(){
       requestAnimationFrame(loop);
-      controls.update();
+      if (controls) controls.update();
       renderer.render(scene, camera);
     })();
+  }
+
+  function fitCameraToRoot() {
+    if (!root || root.children.length === 0) return;
+    const box = new THREE.Box3().setFromObject(root);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * (Math.PI/180);
+    let dist = (maxDim/2) / Math.tan(fov/2);
+    dist *= 1.35; // padding
+
+    const dir = new THREE.Vector3(1, 0.6, 1).normalize();
+    const newPos = center.clone().add(dir.multiplyScalar(dist));
+    camera.position.copy(newPos);
+    camera.near = Math.max(0.001, dist/50);
+    camera.far = dist*50;
+    camera.updateProjectionMatrix();
+    if (controls) {
+      controls.target.copy(center);
+      controls.update();
+    }
   }
 
   function rebuildKitchen(cfg, order, solved) {
     if (!root) return;
     while (root.children.length) root.remove(root.children[0]);
 
-    const matCarcass = new THREE.MeshStandardMaterial({ color: 0x8a8f9a, metalness: 0.1, roughness: 0.9 });
-    const matFront   = new THREE.MeshStandardMaterial({ color: 0xdcdcdc, metalness: 0.2, roughness: 0.6 });
+    const matCarcass = new THREE.MeshLambertMaterial({ color: 0x8a8f9a });
+    const matFront   = new THREE.MeshLambertMaterial({ color: 0xdcdcdc });
 
     let xCursor = 0;
     const gapMM = (cfg.Kitchen.Gap || 2) * MM;
@@ -62,34 +96,41 @@
       const sol = solved[idx];
       const W = (it.width || 600) * MM;
       const D = (it.depth || cfg.Kitchen.Defaults.CarcassDepth || 560) * MM;
-      const H = (sol?.H_carcass || (cfg.Kitchen.H_total - cfg.Kitchen.H_plinth - cfg.Kitchen.T_top)) * MM;
+      const H = (sol && sol.H_carcass != null ? sol.H_carcass : (cfg.Kitchen.H_total - cfg.Kitchen.H_plinth - cfg.Kitchen.T_top)) * MM;
 
       const g = new THREE.Group();
       g.position.set(xCursor, 0, 0);
       root.add(g);
 
+      // Korpus
       const carcass = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), matCarcass);
       carcass.position.set(W/2, H/2, D/2);
       g.add(carcass);
 
+      // Frontovi
       let y = 0;
-      (sol?.fronts || []).forEach((fh, i) => {
-        const fH = fh * MM;
-        const front = new THREE.Mesh(new THREE.BoxGeometry(W, fH, 0.018), matFront);
-        front.position.set(W/2, y + fH/2, 0.009);
-        g.add(front);
-        y += fH;
-        if (i < (sol.gaps?.length || 0)) y += gapMM;
-      });
+      if (sol && Array.isArray(sol.fronts)) {
+        sol.fronts.forEach((fh, i) => {
+          const fH = fh * MM;
+          const front = new THREE.Mesh(new THREE.BoxGeometry(W, fH, Math.max(0.012, 18*MM)), matFront);
+          front.position.set(W/2, y + fH/2, Math.max(0.006, 9*MM));
+          g.add(front);
+          y += fH;
+          if (i < (sol.gaps ? sol.gaps.length : 0)) y += gapMM;
+        });
+      }
 
-      xCursor += W + 0.03;
+      xCursor += W + 0.03; // 30 mm raster
     });
+
+    fitCameraToRoot();
   }
 
   window.addEventListener('DOMContentLoaded', () => {
     const host = document.getElementById('viewer3d');
     if (!host) return;
     init3D(host);
+
     const out = window.recompute && window.recompute();
     if (out) rebuildKitchen(out.cfg, out.order, out.solved);
 
