@@ -154,6 +154,58 @@ function recompute(){
 // izloži globalno, da 3D viewer može da pozove i dobije podatke
 window.recompute = recompute;
 
+// ===== Order Builder (UI -> JSON)
+let builder = [];
+const TEMPLATES = {
+  drawer_3: ()=>({ id: nextId(), type: 'drawer_3', width:600, depth:560, drawerHeights:[170,200] }),
+  combo_drawer_door: ()=>({ id: nextId(), type: 'combo_drawer_door', width:600, depth:560 }),
+  sink_1door: ()=>({ id: nextId(), type: 'sink_1door', width:600, depth:560 }),
+  dishwasher_60: ()=>({ id: nextId(), type: 'dishwasher_60', width:600, depth:560, appliance:{ nicheMin:815 } }),
+  oven_housing: ()=>({ id: nextId(), type: 'oven_housing', width:600, depth:560, appliance:{ ovenNiche:595 } }),
+};
+function nextId(){ return 'E'+(builder.length+1); }
+function addItem(type){ const f=TEMPLATES[type]; if(!f) return; builder.push(f()); renderBuilder(); syncJSONFromBuilder(); window.recompute(); }
+function delItem(i){ builder.splice(i,1); renumberIds(); renderBuilder(); syncJSONFromBuilder(); window.recompute(); }
+function moveItem(i,dir){ const j=i+dir; if(j<0||j>=builder.length) return; const t=builder[i]; builder[i]=builder[j]; builder[j]=t; renumberIds(); renderBuilder(); syncJSONFromBuilder(); window.recompute(); }
+function renumberIds(){ builder.forEach((it,idx)=>{ it.id='E'+(idx+1); }); }
+function builderToOrder(){ return JSON.parse(JSON.stringify(builder)); }
+function syncJSONFromBuilder(){ try{ const data=JSON.parse(document.querySelector('#jsonInput').value); data.Order=builderToOrder(); document.querySelector('#jsonInput').value = JSON.stringify(data,null,2); }catch(e){ /* ignore, textarea might be invalid while typing */ } }
+function syncBuilderFromJSON(){ try{ const data=JSON.parse(document.querySelector('#jsonInput').value); builder = Array.isArray(data.Order)? JSON.parse(JSON.stringify(data.Order)) : []; renumberIds(); renderBuilder(); }catch(e){ /* ignore */ } }
+function renderBuilder(){ const host=document.querySelector('#builderList'); if(!host) return; if(!builder.length){ host.innerHTML='<em>Nema elemenata – izaberite iz kataloga iznad.</em>'; return; }
+  const row=(it,i)=>{
+    const extra = it.type==='drawer_3'
+      ? `<label>2. fioka (mm): <input data-k="drawer2" data-i="${'${i}'}" type="number" value="${'${it.drawerHeights?.[1]??200}'}" style="width:80px"></label>`
+      : it.type==='oven_housing'
+        ? `<label>Oven niche (mm): <input data-k="ovenNiche" data-i="${'${i}'}" type="number" value="${'${it.appliance?.ovenNiche??595}'}" style="width:90px"></label>`
+        : it.type==='dishwasher_60'
+          ? `<label>Niche min (mm): <input data-k="nicheMin" data-i="${'${i}'}" type="number" value="${'${it.appliance?.nicheMin??815}'}" style="width:90px"></label>`
+          : '';
+    return `<div class="flex" style="gap:10px; align-items:center; padding:6px 0; border-bottom:1px dashed #2a3140">
+      <strong>#${'${i+1}'}</strong>
+      <span class="mono">${'${it.id}'}</span>
+      <span>${'${it.type}'}</span>
+      <label>W: <input data-k="width" data-i="${'${i}'}" type="number" value="${'${it.width??600}'}" style="width:70px"></label>
+      <label>D: <input data-k="depth" data-i="${'${i}'}" type="number" value="${'${it.depth??560}'}" style="width:70px"></label>
+      ${'${extra}'}
+      <span class="spacer"></span>
+      <button data-act="up" data-i="${'${i}'}">↑</button>
+      <button data-act="down" data-i="${'${i}'}">↓</button>
+      <button data-act="del" data-i="${'${i}'}">✕</button>
+    </div>`; };
+  host.innerHTML = builder.map(row).join('');
+}
+// Delegacija događaja
+(function(){ const cat=document.querySelector('#catalog'); if(cat){ cat.addEventListener('click', e=>{ const t=e.target.closest('button[data-type]'); if(!t) return; addItem(t.dataset.type); }); }
+  const bl=document.querySelector('#builderList'); if(bl){ bl.addEventListener('click', e=>{ const b=e.target.closest('button[data-act]'); if(!b) return; const i=Number(b.dataset.i); const act=b.dataset.act; if(act==='del') delItem(i); if(act==='up') moveItem(i,-1); if(act==='down') moveItem(i,1); });
+    bl.addEventListener('input', e=>{ const inp=e.target; const k=inp.dataset.k; const i=Number(inp.dataset.i); if(k&&Number.isFinite(i)){ const it=builder[i]; const v=Number(inp.value); if(k==='width'||k==='depth'){ it[k]=v; } else if(k==='drawer2'){ it.drawerHeights = Array.isArray(it.drawerHeights)? it.drawerHeights:[170,200]; it.drawerHeights[1]=v; } else if(k==='ovenNiche'){ it.appliance=it.appliance||{}; it.appliance.ovenNiche=v; } else if(k==='nicheMin'){ it.appliance=it.appliance||{}; it.appliance.nicheMin=v; }
+      syncJSONFromBuilder(); window.recompute(); }
+    });
+  }
+})();
+
+/* boot */
+window.addEventListener("DOMContentLoaded",()=>{
+
 /* boot */
 window.addEventListener("DOMContentLoaded",()=>{
   $("#btnRun").addEventListener("click",()=>window.recompute());
