@@ -166,12 +166,6 @@ window.addEventListener("DOMContentLoaded",()=>{
   });
   window.recompute();
 });
-  $("#btnCsv").addEventListener("click",()=>{
-    const rows=window.__lastAggBOM||[]; const csv=toCSV(rows);
-    downloadCSVMobileAware("3xmeri_BOM.csv",csv);
-  });
-  recompute();
-});
 
 function downloadCSVMobileAware(name, data){
   const url='data:text/csv;charset=utf-8,'+encodeURIComponent(data);
