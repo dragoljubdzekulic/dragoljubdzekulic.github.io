@@ -176,10 +176,7 @@
         const fhm = fh*MM;
         const front=new THREE.Mesh(new THREE.BoxGeometry(W,fhm,0.018), matFront);
         const yCenter = (Hc - (acc + fhm/2));
-        front.position.set(W/2, yCenter, zBase);
-        front.userData._isFront=true; front.userData._zBase=zBase; g.add(front); addOutline(front, 0xffffff);
-        acc += fhm + (fi < (sol.fronts.length-1) ? gap : 0);
-      });
+      
         front.position.set(W/2, (fi===0? fh*MM/2 : (sol.fronts.slice(0,fi).reduce((a,b)=>a+b,0)*MM + fi*gap*MM + fh*MM/2)), zBase);
         front.userData._isFront=true; front.userData._zBase=zBase; g.add(front); addOutline(front, 0xffffff);
       });
