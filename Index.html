@@ -549,7 +549,51 @@ document.getElementById("btnCsv").replaceWith((() => {
   });
   return b;
 })());
-</script>
 
+<!-- Nova verzija: ES Module Three + OrbitControls -->
+<script type="module">
+  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.module.js';
+  import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.159.0/examples/jsm/controls/OrbitControls.js';
+
+  const container = document.getElementById('viewer3d');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x141922);
+
+  const camera = new THREE.PerspectiveCamera(50, container.clientWidth/container.clientHeight, 0.01, 100);
+  camera.position.set(2, 1.2, 2);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  container.innerHTML = '';
+  container.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+
+  // svetla + mreža
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+  dir.position.set(2,3,2);
+  scene.add(dir);
+  const grid = new THREE.GridHelper(4, 20, 0x666a73, 0x2a3040);
+  scene.add(grid);
+
+  // probni blok (da vidiš da radi)
+  const cube = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 0.75, 0.56),
+    new THREE.MeshStandardMaterial({ color: 0xdcdcdc })
+  );
+  cube.position.y = 0.375;
+  scene.add(cube);
+
+  function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+</script>
 </body>
 </html>
+
