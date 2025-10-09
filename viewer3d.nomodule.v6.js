@@ -171,14 +171,16 @@
       carc.position.set(W/2,Hc/2,D/2); g.add(carc); addOutline(carc, 0x88a6ff);
 
       // frontovi (pozicioniranje odozgo nadole)
-      let zBase=D+0.001; let acc=0;
+      let zBase=0.001; // front lica na z≈0 (ka kameri)
+      let acc=0;
       (sol?.fronts||[]).forEach((fh,fi)=>{
         const fhm = fh*MM;
         const front=new THREE.Mesh(new THREE.BoxGeometry(W,fhm,0.018), matFront);
         const yCenter = (Hc - (acc + fhm/2));
-      
-        front.position.set(W/2, (fi===0? fh*MM/2 : (sol.fronts.slice(0,fi).reduce((a,b)=>a+b,0)*MM + fi*gap*MM + fh*MM/2)), zBase);
+        front.position.set(W/2, yCenter, zBase);
         front.userData._isFront=true; front.userData._zBase=zBase; g.add(front); addOutline(front, 0xffffff);
+        acc += fhm;
+        if (fi < (sol.fronts.length-1)) acc += gap; // dodaj razmak između frontova
       });
 
       // kote
