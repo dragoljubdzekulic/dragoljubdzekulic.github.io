@@ -14,7 +14,7 @@
   const center = new THREE.Vector3(0,0.35,0);
 
   // explode
-  let exploded=false, explodeOffset=0.08; // 80 mm
+  let exploded=false, explodeOffset=-0.08; // povuci frontove ka kameri (negativan Z)
 
   function init(){
     const host = $("viewer3d"); if(!host){ setStatus("Nema #viewer3d"); return; }
@@ -122,7 +122,7 @@
     ctx.strokeText(text, s/2, s/2);
     ctx.fillStyle='#d9e8ff';
     ctx.fillText(text, s/2, s/2);
-    const tex=new THREE.CanvasTexture(c);
+    const tex=new THREE.CanvasTexture(c); tex.needsUpdate=true;
     const mat=new THREE.SpriteMaterial({ map: tex, depthTest:false, depthWrite:false, transparent:true });
     const sp=new THREE.Sprite(mat); sp.userData._baseScale=size; // baza za auto-scale
     return sp;
@@ -152,7 +152,9 @@
   }
 
   function buildFromApp(cfg, order, solved){
-    clear(root); clear(dimsGroup);
+    clear(root);
+    if(dimsGroup){ scene.remove(dimsGroup); }
+    dimsGroup = new THREE.Group(); scene.add(dimsGroup);
     let x=0, built=0;
     const gap = (cfg?.Kitchen?.Gap ?? 2)*MM;
 
