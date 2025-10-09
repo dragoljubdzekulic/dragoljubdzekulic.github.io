@@ -235,7 +235,7 @@ function recompute(){
 // izloži globalno, da 3D viewer može da pozove i dobije podatke
 window.recompute = recompute;
 
-// ===== Global controls helpers (Kitchen <-> inputs)
+// ===== Global controls helpers (Kitchen <-> input)
 function getKitchenObj(){
   try{ const data=JSON.parse(document.querySelector('#jsonInput').value);
        return (data.Kitchen||data.kitchen||{}); }catch(e){ return {}; }
