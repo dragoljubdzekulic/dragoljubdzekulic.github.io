@@ -58,110 +58,56 @@ function bomForItem(cfg,it,sol){
   const t=cfg.Kitchen.Defaults.SideThickness,d=it.depth??cfg.Kitchen.Defaults.CarcassDepth,H=sol.H_carcass,netW=(it.width??600)-2*t;
   out.push({itemId:it.id,part:"BOK-L",qty:1,w:d,h:H,th:t,edge:"2L",material:"PB18",notes:""});
   out.push({itemId:it.id,part:"BOK-R",qty:1,w:d,h:H,th:t,edge:"2L",material:"PB18",notes:""});
-  out.push({itemId:it.id,part:"DNO",qty:1,w:d,h:netW,th:t,edge:"1L",material:"PB18",notes:"orijentacija: dubina x širina"});
-  out.push({itemId:it.id,part:"RAIL-TOP",qty:1,w:netW,h:100,th:t,edge:"1L",material:"PB18",notes:""});
-  out.push({itemId:it.id,part:"RAIL-BOT",qty:1,w:netW,h:100,th:t,edge:"1L",material:"PB18",notes:""});
-  out.push({itemId:it.id,part:"LEĐA",qty:1,w:netW,h:H-50,th:cfg.Kitchen.Defaults.BackThickness,edge:"-",material:"HDF3",notes:""});
-  switch(it.type){
-    case"drawer_3": out.push({itemId:it.id,part:"OKOV",qty:3,w:"-",h:"-",th:"-",edge:"-",material:"KLIZAČ",notes:"3x set klizača (po izboru)"}); break;
-    case"sink_1door": out.push({itemId:it.id,part:"OKOV",qty:2,w:"-",h:"-",th:"-",edge:"-",material:"ŠARKE",notes:"2–3 šarke"}); break;
-    case"combo_drawer_door": out.push({itemId:it.id,part:"OKOV",qty:1,w:"-",h:"-",th:"-",edge:"-",material:"KLIZAČ",notes:"1x set klizača + 2–3 šarke"}); break;
-    case"oven_housing": out.push({itemId:it.id,part:"OKOV",qty:1,w:"-",h:"-",th:"-",edge:"-",material:"SET",notes:"Nosači rerne + ventilacioni prorezi"}); break;
-    case"dishwasher_60": out.push({itemId:it.id,part:"OKOV",qty:1,w:"-",h:"-",th:"-",edge:"-",material:"SET",notes:"Adapter/šrafovi po specifikaciji mašine"}); break;
-  }
+  out.push({itemId:it.id,part:"DNO",qty:1,w:netW,h:d,th:t,edge:"2S",material:"PB18",notes:""});
+  out.push({itemId:it.id,part:"TOP",qty:1,w:netW,h:d,th:t,edge:"2S",material:"PB18",notes:""});
   return out;
 }
 
-function aggregateBOM(ls){
-  const key=r=>[r.part,r.w,r.h,r.th,r.edge,r.material,r.notes].join("|");
-  const m=new Map();
-  for(const r of ls){const k=key(r),p=m.get(k); if(p)p.qty+=r.qty; else m.set(k,{...r});}
-  return[...m.values()];
+function aggregateBOM(rows){
+  const key=r=>`${r.part}|${r.w}|${r.h}|${r.th}|${r.edge}|${r.material}`;
+  const map=new Map();
+  rows.forEach(r=>{
+    const k=key(r); const prev=map.get(k);
+    if(prev) prev.qty+=r.qty; else map.set(k,{...r});
+  });
+  return Array.from(map.values());
 }
 
 function toCSV(rows){
-  const esc=v=>{if(v==null)return"";const s=String(v);return /[",\n;]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
-  const hdr=["ItemID","Part","Qty","W","H","Th","Edge","Material","Notes"];
-  const out=[hdr.join(";")];
-  for(const r of rows) out.push([r.itemId,r.part,r.qty,r.w,r.h,r.th,r.edge,r.material,r.notes].map(esc).join(";"));
-  return out.join("\n");
+  if(!rows.length) return "";
+  const cols=Object.keys(rows[0]);
+  const esc=v=>`"${String(v).replace(/"/g,'""')}"`;
+  return [cols.join(','), ...rows.map(r=>cols.map(c=>esc(r[c]??"")).join(','))].join('\n');
 }
 
-function renderGlobals(k){
-  const Hc=computeHCarcass(k);
-  $("#globals").innerHTML=[
-    `<span class="pill">H_total: <b>${k.H_total}</b></span>`,
-    `<span class="pill">H_plinth: <b>${k.H_plinth}</b></span>`,
-    `<span class="pill">T_top: <b>${k.T_top}</b></span>`,
-    `<span class="pill success">H_carcass: <b>${Hc}</b></span>`,
-    `<span class="pill">Gap: <b>${k.Gap}</b></span>`,
-    `<span class="pill">DatumFirstDrawer: <b>${k.DatumFirstDrawer}</b></span>`
-  ].join(" ");
-}
-
-function renderElements(cfg,order,sol){
-  const host=$("#elements"); host.innerHTML="";
-  sol.forEach((res,i)=>{
-    const it=order[i];
-    const d=document.createElement("div");
-    d.className="el";
-    d.innerHTML=`<h4>${it.id} – ${it.type} (${it.width}×${it.depth})</h4>
-      <div class="svgwrap">${renderElementSVG(res,120,0.35)}</div>
-      ${res.notes.length?'<div class="notes">'+res.notes.map(n=>'- '+n).join('<br>')+'</div>':""}`;
-    host.appendChild(d);
-  });
-}
-
-function renderBOM(agg){
-  const tb=$("#bomTable tbody"); tb.innerHTML="";
-  for(const r of agg){
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${r.itemId??"-"}</td><td>${r.part}</td><td class="right">${r.qty}</td><td class="right">${r.w}</td><td class="right">${r.h}</td><td class="right">${r.th}</td><td>${r.edge}</td><td>${r.material}</td><td>${r.notes}</td>`;
-    tb.appendChild(tr);
-  }
+function renderBOM(rows){
+  const el=$("#bom");
+  el.innerHTML = `<table><thead><tr><th>Part</th><th class="ta-right">Qty</th><th class="ta-right">W</th><th class="ta-right">H</th><th class="ta-right">TH</th><th>Edge</th><th>Material</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${r.part}</td><td class="ta-right">${r.qty}</td><td class="ta-right">${r.w}</td><td class="ta-right">${r.h}</td><td class="ta-right">${r.th}</td><td>${r.edge}</td><td>${r.material}</td></tr>`).join('')+
+    `</tbody></table>`;
 }
 
 function renderCSVPreview(rows){
-  const tb=$("#csvPreviewTable tbody"); if(!tb)return;
-  tb.innerHTML="";
-  for(const r of rows){
-    const tr=document.createElement("tr");
-    [r.itemId,r.part,r.qty,r.w,r.h,r.th,r.edge,r.material,r.notes].forEach((v,i)=>{
-      const td=document.createElement("td");
-      td.textContent=(v==null?"":String(v));
-      if(i>=2&&i<=5) td.className="right";
-      tr.appendChild(td);
-    });
-    tb.appendChild(tr);
-  }
+  const csv=toCSV(rows); const ta=$("#csvRaw"); if(ta) ta.value=csv;
 }
 
-function wireCopyCsv(){
-  const b=$("#btnCopyCsv"); if(!b)return;
-  b.addEventListener("click",async()=>{
-    try{
-      const rows=window.__lastAggBOM||[];
-      const csv=toCSV(rows);
-      await navigator.clipboard.writeText(csv);
-      b.textContent="Kopirano ✓";
-      setTimeout(()=>b.textContent="Kopiraj CSV",1500);
-    }catch(e){
-      b.textContent="Greška pri kopiranju";
-      setTimeout(()=>b.textContent="Kopiraj CSV",1500);
-    }
+function renderGlobals(k){
+  $("#globals").innerHTML = `H_total=${k.H_total} • H_plinth=${k.H_plinth} • T_top=${k.T_top} • Gap=${k.Gap}`;
+}
+
+function renderElements(cfg,order,solved){
+  const host=$("#elements"); host.innerHTML="";
+  solved.forEach((s,i)=>{
+    const svg=renderElementSVG(s,120,0.35);
+    const card=document.createElement('div'); card.className='card'; card.style.padding='8px'; card.innerHTML =
+      `<div class="small" style="margin-bottom:6px; opacity:.8">${order[i].id} — H_carcass=${s.H_carcass}mm</div>`+svg;
+    host.appendChild(card);
   });
 }
 
-function downloadCSVMobileAware(name,csv){
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.download=name; a.rel="noopener"; a.target="_blank";
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),2000);
-}
+function wireCopyCsv(){ const b=$("#btnCopyCsv"); if(!b) return; b.onclick=()=>{ const t=$("#csvRaw"); t.select(); document.execCommand('copy'); b.textContent='Kopirano ✓'; setTimeout(()=>b.textContent='Copy CSV',900); } }
 
-/* ---------- KOREGOVANO: recompute sada VRAĆA podatke i izložen je globalno ---------- */
+// recompute + hook za viewer
 function recompute(){
   $("#msg").textContent="";
   try{
@@ -219,3 +165,9 @@ window.addEventListener("DOMContentLoaded",()=>{
   });
   recompute();
 });
+
+function downloadCSVMobileAware(name, data){
+  const url='data:text/csv;charset=utf-8,'+encodeURIComponent(data);
+  const a=document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
