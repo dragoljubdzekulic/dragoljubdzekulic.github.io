@@ -14,147 +14,107 @@
     connect-src 'self';
     object-src 'none';
     base-uri 'self';
-    form-action 'self';
   ">
-
   <style>
-    :root { --bg:#0f1117; --panel:#161a22; --ink:#e6e6e6; --muted:#9aa0a6; --accent:#4da3ff; --ok:#49d17d; --warn:#ffb84d; }
-    html,body { background: var(--bg); color: var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans"; margin:0; }
-    header { padding: 16px 20px; background: var(--panel); position: sticky; top:0; z-index:5; border-bottom: 1px solid #222833;}
-    h1 { font-size: 18px; margin:0; letter-spacing:.2px; }
-    main { padding: 18px; display: grid; gap: 16px; }
-    .row { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 1000px) { .row { grid-template-columns: 1.2fr 1fr; align-items: start; } }
-    .card { background: var(--panel); border: 1px solid #222833; border-radius: 10px; padding: 14px; }
-    .card h2 { font-size: 16px; margin: 0 0 8px; }
-    .card h3 { font-size: 14px; margin: 12px 0 6px; color: var(--muted); }
-    textarea { width: 100%; height: 260px; background: #0b0e14; color: var(--ink); border: 1px solid #222833; border-radius: 8px; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-    button { background: var(--accent); color: #00152a; border: none; border-radius: 8px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
-    button.ghost { background: transparent; color: var(--ink); border: 1px solid #2a3241; }
-    .flex { display:flex; gap:10px; flex-wrap: wrap; align-items: center; }
-    .pill { padding: 2px 8px; border-radius: 99px; border: 1px solid #2a3241; color: var(--muted); font-size: 12px; }
-    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .el { background:#0b0e14; border:1px solid #222833; border-radius: 8px; padding:10px; }
-    .el h4 { margin:0 0 8px; font-size: 14px; }
-    .svgwrap { background:#02040a; border: 1px dashed #2a3241; border-radius: 6px; padding: 6px; display:flex; justify-content:center; }
-    .notes { color: var(--warn); font-size: 12px; margin-top:6px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #262d3a; font-size: 13px; }
-    th { color: #c9ced6; }
-    .right { text-align: right; }
-    .small { font-size: 12px; color: var(--muted); }
-    .success { color: var(--ok); }
-    .kbd { background:#10141e; border:1px solid #283047; border-radius:4px; padding:2px 6px; font-family: ui-monospace, monospace; }
-    .footer { color: var(--muted); font-size:12px; padding: 8px 0 0; }
+    :root{ --bg:#0b0e14; --card:#111623; --ink:#e6ecf3; --ink-2:#bac7d9; --muted:#8d9bb1; --accent:#6ea8ff; --line:#222833; }
+    html,body{height:100%;}
+    body{margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;}
+    h1{font-size:20px; margin:14px 0 12px}
+    h2{font-size:16px; margin:0 0 8px}
+    .wrap{max-width:1100px; margin:0 auto; padding:14px}
+    .grid{display:grid; grid-template-columns: 1fr 1fr; gap:12px}
+    .card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px}
+    .small{color:var(--muted); font-size:13px}
+    .flex{display:flex; gap:8px; align-items:center}
+    input,textarea,button,select{ background:#0d1322; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:8px; }
+    textarea{ width:100%; min-height:240px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px }
+    button{ cursor:pointer }
+    table{border-collapse:collapse; width:100%;}
+    th,td{border-bottom:1px dashed #2a3140; padding:6px 8px; font-size:13px}
+    th{ color:#b8c7dd; text-align:left; font-weight:600 }
+    .ta-right{text-align:right}
+    .toolbar button{padding:6px 10px; font-weight:600}
+    .toolbar .spacer{flex:1}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px}
   </style>
 </head>
 <body>
-<header>
-  <h1>3xMeri – Kalkulator frontova i BOM (GitHub Pages + 3D) – verzija x</h1>
-</header>
-<main>
-  <div class="row">
-    <div class="card">
-      <h2>1) JSON konfiguracija (projekat + porudžbina)</h2>
-      <p class="small">Uredi i klikni <span class="kbd">Recompute</span>. Sva izračunavanja i skice se rade lokalno u tvom browseru.</p>
-      <textarea id="jsonInput" aria-label="JSON konfiguracija">{
+  <div class="wrap">
+    <h1>3xMeri – Frontend kalkulator elemenata</h1>
+
+    <div class="grid">
+      <div class="card">
+        <h2>1) Ulaz (JSON)</h2>
+        <div class="flex toolbar">
+          <button id="btnRun">Recompute</button>
+          <button id="btnReset">Reset JSON</button>
+          <span class="spacer"></span>
+          <button id="btnIso">Iso</button>
+          <button id="btnTop">Top</button>
+          <button id="btnFront">Front</button>
+          <button id="btnExplode">Explode</button>
+          <button id="btnShot">Screenshot</button>
+        </div>
+        <textarea id="jsonInput">{
   "Kitchen": {
     "H_total": 900,
     "H_plinth": 110,
     "T_top": 38,
     "Gap": 2,
-    "FrontGrid": [140, 200, 280, 300],
-    "DatumFirstDrawer": 140,
-    "Defaults": { "CarcassDepth": 560, "SideThickness": 18, "BackThickness": 3 }
+    "Defaults": { "CarcassDepth": 560, "SideThickness": 18 }
   },
   "Order": [
-    { "id": "E1", "type": "sink_1door",        "width": 600, "depth": 560 },
-    { "id": "E2", "type": "dishwasher_60",     "width": 600, "depth": 560, "appliance": { "nicheMin": 815 } },
-    { "id": "E3", "type": "oven_housing",      "width": 600, "depth": 560, "appliance": { "ovenNiche": 595 } },
-    { "id": "E4", "type": "drawer_3",          "width": 600, "depth": 560, "drawerHeights": [140, 200, null] },
-    { "id": "E5", "type": "combo_drawer_door", "width": 400, "depth": 560 }
+    { "id":"E1", "type":"drawer_3", "width": 600, "depth": 560, "drawerHeights": [170, 200] },
+    { "id":"E2", "type":"oven_housing", "width": 600, "appliance": { "ovenNiche": 595 } },
+    { "id":"E3", "type":"sink_1door", "width": 600 }
   ]
-}</textarea>
-      <div class="flex" style="margin-top:10px">
-        <button id="btnRun">Recompute</button>
-        <button id="btnReset" class="ghost">Reset na primer</button>
+}
+</textarea>
+        <div id="msg" class="small"></div>
       </div>
-      <div id="msg" class="small" role="status"></div>
-    </div>
 
-    <div class="card">
-      <h2>2) Globalni parametri</h2>
-      <div id="globals" class="flex"></div>
-      <div class="footer">Napomena: <span class="kbd">H_carcass = H_total − H_plinth − T_top</span> i važi za sve donje elemente.</div>
-    </div>
-  </div>
+      <div class="card">
+        <h2>2) Proračun elemenata (preview)</h2>
+        <div id="elements" class="flex" style="flex-wrap:wrap"></div>
+      </div>
 
-  <div class="card">
-    <h2>3) Skice frontova (2D)</h2>
-    <div id="elements" class="grid"></div>
-  </div>
+      <div class="card" style="grid-column: 1 / -1;">
+        <h2>3) 3D prikaz</h2>
+        <div id="viewer3d" style="height: 380px; background:#0b0e14; border:1px solid #222833; border-radius:8px;"></div>
+        <div id="viewer3d-status" class="small" style="margin-top:6px; color:#9aa0a6;">status: init…</div>
+      </div>
 
-  <div class="card">
-    <h2>4) 3D prikaz (beta)</h2>
-    <div class="flex" style="gap:8px; margin-bottom:8px; flex-wrap:wrap">
-  <button id="btnIso"     class="ghost">Iso</button>
-  <button id="btnTop"     class="ghost">Top</button>
-  <button id="btnFront"   class="ghost">Front</button>
-  <button id="btnExplode" class="ghost">Explode</button>
-  <button id="btnShot"    class="ghost">Screenshot</button>
-</div>
-<div id="viewer3d" style="height: 380px; background:#0b0e14; border:1px solid #222833; border-radius:8px;"></div>
-<div id="viewer3d-status" class="small" style="margin-top:6px; color:#9aa0a6;">status: init…</div>
+      <div class="card">
+        <h2>4) BOM (krojne liste frontova + korpusa) – agregat</h2>
+        <div class="flex" style="justify-content: space-between; gap:8px; margin-bottom:8px;">
+          <div class="flex">
+            <button id="btnCsv">Preuzmi CSV</button>
+            <button id="btnCopyCsv">Copy CSV</button>
+          </div>
+          <a id="csvLink" class="small mono">CSV link</a>
+        </div>
+        <div id="bom"></div>
+      </div>
 
-  </div>
+      <div class="card">
+        <h2>5) CSV preview</h2>
+        <textarea id="csvRaw" class="mono" readonly></textarea>
+      </div>
 
-  <div class="card">
-    <h2>5) BOM (krojne liste frontova + korpusa) – agregat</h2>
-    <div class="flex" style="justify-content: space-between; gap:8px; margin-bottom:8px;">
-      <div class="small">Dimenzije u mm. Širina fronta = širina elementa − 4 mm (po 2 mm luft levo/desno).</div>
-      <div class="flex">
-        <button id="btnCsv">Preuzmi CSV</button>
-        <a id="csvLink" class="ghost" href="#" target="_blank" style="display:inline-block; text-decoration:none; border:1px solid #2a3241; padding:10px 14px; border-radius:8px;">Otvori CSV</a>
+      <div class="card">
+        <h2>6) Globalne vrednosti</h2>
+        <div id="globals" class="small"></div>
+      </div>
+
+      <div class="card">
+        <h2>7) Validacije</h2>
+        <div id="valid" class="small"></div>
       </div>
     </div>
-    <table id="bomTable">
-      <thead>
-        <tr><th>ItemID</th><th>Part</th><th>Qty</th><th>W</th><th>H</th><th>Th</th><th>Edge</th><th>Material</th><th>Notes</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
   </div>
 
-  <div class="card">
-    <h2>6) CSV pregled (ono što će biti preuzeto)</h2>
-    <div class="small" style="margin-bottom:8px;">Tabela ispod prikazuje <b>identične</b> redove koji idu u CSV fajl. Automatski se osvežava posle <span class="kbd">Recompute</span>.</div>
-    <div class="flex" style="justify-content: flex-end; margin-bottom:8px; gap:8px;">
-      <button id="btnCopyCsv" class="ghost">Kopiraj CSV</button>
-    </div>
-    <table id="csvPreviewTable">
-      <thead>
-        <tr><th>ItemID</th><th>Part</th><th>Qty</th><th>W</th><th>H</th><th>Th</th><th>Edge</th><th>Material</th><th>Notes</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <div class="card">
-    <h3>RAW CSV (copy & paste fallback)</h3>
-    <div class="small" style="margin-bottom:6px;">Dug pritisak → Select All → Copy. Ovo uvek radi.</div>
-    <textarea id="csvRaw" rows="10" readonly></textarea>
-  </div>
-
-  <div class="card">
-    <h2>7) Validacije</h2>
-    <div id="valid" class="small"></div>
-  </div>
-</main>
-
-<script src="app.js?v=10"></script>
-<script src="assets/three.min.js?v=r159"></script>
-<script src="viewer3d.nomodule.v6.js?v=11"></script>
-
-  
+  <script src="app.js?v=10"></script>
+  <script src="assets/three.min.js?v=r159"></script>
+  <script src="viewer3d.nomodule.v6.js?v=11"></script>
 </body>
 </html>
