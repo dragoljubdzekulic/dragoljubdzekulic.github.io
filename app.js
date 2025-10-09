@@ -3,7 +3,8 @@ const $=s=>document.querySelector(s);
 function computeHCarcass(k){return k.H_total-k.H_plinth-k.T_top}
 
 function solveItem(k,it){
-  const H=computeHCarcass(k),gap=k.Gap,FIRST=k.DatumFirstDrawer;
+  const N=(x,d=0)=>{x=Number(x);return Number.isFinite(x)?x:d};
+  const H=N(computeHCarcass(k)), gap=N(k.Gap,2), FIRST=N(k.DatumFirstDrawer,170);
   const res={id:it.id,H_carcass:H,fronts:[],gaps:[],notes:[]},push=()=>res.gaps.push(gap);
   switch(it.type){
     case"sink_1door":
@@ -26,7 +27,7 @@ function solveItem(k,it){
     }
     case"drawer_3":{
       const second=(it.drawerHeights&&it.drawerHeights[1]!=null)?it.drawerHeights[1]:200;
-      const third=H-FIRST-second-2*gap;
+      let third=H-FIRST-second-2*gap; if(third<0){ res.notes.push("Treća fioka < 0 — proveri ulaz"); third=0; }
       res.fronts.push(FIRST); push(); res.fronts.push(second); push(); res.fronts.push(third);
       break;
     }
