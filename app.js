@@ -38,7 +38,7 @@ function solveItem(k,it){
   return res;
 }
 
-function solveOrder(cfg,ord){return ord.map(it=>solveItem(cfg.Kitchen,it))}
+function solveOrder(cfg,ord){ const K = (cfg.Kitchen || cfg.kitchen || {}); return ord.map(it=>solveItem(K,it)); }
 
 function renderElementSVG(res,w=120,ppm=0.35){
   const tot=res.H_carcass*ppm; let y=0;
@@ -116,7 +116,7 @@ function recompute(){
     const cfg=data;
 
     // proračun
-    renderGlobals(cfg.Kitchen);
+    renderGlobals(cfg.Kitchen || cfg.kitchen || {});
     const solved=solveOrder(cfg,data.Order);
     renderElements(cfg,data.Order,solved);
 
@@ -156,10 +156,16 @@ window.recompute = recompute;
 
 /* boot */
 window.addEventListener("DOMContentLoaded",()=>{
-  $("#btnRun").addEventListener("click",recompute);
+  $("#btnRun").addEventListener("click",()=>window.recompute());
   $("#btnReset").addEventListener("click",()=>{
-    const ta=$("#jsonInput"); ta.value=ta.defaultValue; recompute();
+    const ta=$("#jsonInput"); ta.value=ta.defaultValue; window.recompute();
   });
+  $("#btnCsv").addEventListener("click",()=>{
+    const rows=window.__lastAggBOM||[]; const csv=toCSV(rows);
+    downloadCSVMobileAware("3xmeri_BOM.csv",csv);
+  });
+  window.recompute();
+});
   $("#btnCsv").addEventListener("click",()=>{
     const rows=window.__lastAggBOM||[]; const csv=toCSV(rows);
     downloadCSVMobileAware("3xmeri_BOM.csv",csv);
