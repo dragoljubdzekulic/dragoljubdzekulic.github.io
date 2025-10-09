@@ -155,17 +155,32 @@
       carc.position.set(W/2, Hc/2, D/2); g.add(carc);
 
       // FRONTOVI OD VRHA NADOLE
-      let remainingY = Hc;
-      (sol?.fronts || []).forEach((fh, j)=>{
-        const fH = fh*MM;
-        remainingY -= fH;
-        const front = new THREE.Mesh(new THREE.BoxGeometry(W,fH, Math.max(0.012, 18*MM)), matFr);
-        const zBase = Math.max(0.006, 9*MM);
-        front.position.set(W/2, remainingY + fH/2, zBase);
-        front.userData = { _zBase: zBase, _isFront:true };
-        g.add(front);
-        if(j < (sol?.gaps?.length||0)) remainingY -= gap;
-      });
+let remainingY = Hc;              // polazimo od vrha
+const tFront = Math.max(0.012, 18*MM);  // debljina fronta ~18 mm
+const zFrontFace = D;             // prednja ivica korpusa je na z = D
+
+(sol?.fronts || []).forEach((fh, j) => {
+  const fH = fh * MM;
+
+  // spusti se za visinu panela (od vrha do dole)
+  remainingY -= fH;
+
+  const front = new THREE.Mesh(
+    new THREE.BoxGeometry(W, fH, tFront),
+    matFr
+  );
+
+  // ✅ front NA PREDNJU RAVAN: z = D + t/2
+  const zBase = zFrontFace + tFront / 2;
+
+  front.position.set(W/2, remainingY + fH/2, zBase);
+  front.userData = { _zBase: zBase, _isFront: true };
+  g.add(front);
+
+  // ubaci luft između frontova
+  if (j < (sol?.gaps?.length || 0)) remainingY -= gap;
+});
+
 
       // dimenzije
       dimsGroup.add(dimX(x, 0, D+0.02, W, `${Math.round(W/MM)}mm`));
