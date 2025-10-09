@@ -9,7 +9,7 @@
   let scene, camera, renderer, root, dimsGroup;
   let dragging=false, lastX=0, lastY=0, yaw=Math.PI/4, pitch=Math.atan(0.6), dist=2.2;
   const center = new THREE.Vector3(0,0.35,0);
-  let exploded=false; const explodeOffset=0.05; // 50mm
+  let exploded=false; const explodeOffset=0.08; // 80mm
   const MM=0.002;
 
   const matCar = new THREE.MeshLambertMaterial({ color: 0x8a8f9a });
@@ -37,7 +37,7 @@
     camera = new THREE.PerspectiveCamera(50, w/h, 0.01, 100);
     updateCameraPos();
 
-    renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
     renderer.setPixelRatio(window.devicePixelRatio||1);
     renderer.setSize(w,h);
     host.innerHTML=""; host.appendChild(renderer.domElement);
@@ -186,7 +186,15 @@
     const top =   ()=>{ pitch=Math.PI/2-0.001; yaw=0; dist=2.2; updateCameraPos(); setStatus("3D: view = Top"); };
     const front = ()=>{ pitch=0; yaw=0; dist=2.2; updateCameraPos(); setStatus("3D: view = Front"); };
     const explode=()=>{ exploded=!exploded; applyExplode(); };
-    const shot =  ()=>{ const url=renderer.domElement.toDataURL("image/png"); const a=document.createElement("a"); a.href=url; a.download="3xmeri_3d.png"; document.body.appendChild(a); a.click(); a.remove(); setStatus("3D: screenshot ✓"); };
+    const shot =  ()=>{
+  renderer.render(scene, camera);               // dodatni render — bitno za PNG
+  const url = renderer.domElement.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = url; a.download = "3xmeri_3d.png";
+  document.body.appendChild(a); a.click(); a.remove();
+  setStatus("3D: screenshot ✓");
+};
+
 
     $("btnIso")    && $("btnIso").addEventListener("click", iso);
     $("btnTop")    && $("btnTop").addEventListener("click", top);
