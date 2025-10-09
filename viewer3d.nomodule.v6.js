@@ -10,16 +10,11 @@
   let scene, camera, renderer, root, dimsGroup;
   // kontrole (naša orbita)
   let dragging=false, lastX=0, lastY=0;
-  let yaw=0, pitch=Math.atan(0.6), dist=2.2;
+  let yaw=Math.PI, pitch=Math.atan(0.6), dist=2.2;
   const center = new THREE.Vector3(0,0.35,0);
 
   // explode
   let exploded=false, explodeOffset=0.08; // 80 mm
-  const MM = 0.002;
-
-  // materijali (kontrast)
-  const matCar = new THREE.MeshStandardMaterial({ color: 0x555b66, metalness: 0.05, roughness: 0.9 });
-  const matFr  = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, metalness: 0.15, roughness: 0.7 });
 
   function init(){
     const host = $("viewer3d"); if(!host){ setStatus("Nema #viewer3d"); return; }
@@ -37,13 +32,11 @@
     host.innerHTML=""; host.appendChild(renderer.domElement);
 
     // svetla – jači kontrast
-    scene.add(new THREE.AmbientLight(0xffffff, 0.25));            // malo ambijenta
-    const key = new THREE.DirectionalLight(0xffffff, 1.0);        // glavno svetlo
-    key.position.set(2.0, 3.0, 1.6); scene.add(key);
-    const fill = new THREE.DirectionalLight(0xffffff, 0.45);      // popuna sa druge strane
-    fill.position.set(-2.0, 1.8, -1.6); scene.add(fill);
+    const amb = new THREE.AmbientLight(0xb8c7dd, 0.35); scene.add(amb);
+    const dir1 = new THREE.DirectionalLight(0xffffff, 0.85); dir1.position.set(0.7,1,0.6); scene.add(dir1);
+    const dir2 = new THREE.DirectionalLight(0xaad0ff, 0.35); dir2.position.set(-1,0.6,-0.8); scene.add(dir2);
 
-    // diskretnija mreža
+    // grid
     const grid = new THREE.GridHelper(4, 20, 0x5f6d85, 0x273042);
     scene.add(grid);
 
@@ -59,15 +52,13 @@
       if(!dragging) return;
       const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
       yaw -= dx*0.005; pitch -= dy*0.005; const lim=Math.PI/2-0.05; pitch=Math.max(-lim,Math.min(lim,pitch)); updateCam();
-    }, {passive:false});
-    cvs.addEventListener("wheel",(e)=>{ e.preventDefault(); dist *= (1 + Math.sign(e.deltaY)*0.1); dist=Math.min(12,Math.max(0.35,dist)); updateCam(); }, {passive:false});
-    // pinch zoom
-    let pinch0=null;
+    });
+    let pinch0=null; const td=(t)=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+    cvs.addEventListener("wheel",(e)=>{ e.preventDefault(); dist *= (1 + Math.sign(e.deltaY)*0.06); dist=Math.min(12,Math.max(0.35,dist)); updateCam(); }, {passive:false});
     cvs.addEventListener("touchstart",e=>{ if(e.touches.length===2) pinch0 = td(e.touches); },{passive:false});
     cvs.addEventListener("touchmove", e=>{
-      if(e.touches.length===2&&pinch0){ e.preventDefault(); const p=td(e.touches); dist*= (pinch0/(p||pinch0)); dist=Math.min(12,Math.max(0.35,dist)); pinch0=p; updateCam(); }
-    },{passive:false});
-    function td(ts){ const dx=ts[0].clientX-ts[1].clientX, dy=ts[0].clientY-ts[1].clientY; return Math.hypot(dx,dy); }
+      if(e.touches.length===2 && pinch0){ e.preventDefault(); const d=td(e.touches); const k=d/pinch0; dist/=k; pinch0=d; dist=Math.min(12,Math.max(0.35,dist)); updateCam(); }
+    }, {passive:false});
 
     window.addEventListener("resize",()=>{
       const w2=Math.max(10, host.clientWidth), h2=Math.max(10, host.clientHeight);
@@ -76,11 +67,11 @@
     });
 
     // dugmad
-    $("#btnIso")    ?.addEventListener("click",()=>{ yaw=Math.PI/4; pitch=Math.atan(0.6); dist=2.2; updateCam(); setStatus("3D: view = Iso"); });
-    $("#btnTop")    ?.addEventListener("click",()=>{ yaw=0; pitch=Math.PI/2-0.001; dist=2.2; updateCam(); setStatus("3D: view = Top"); });
-    $("#btnFront")  ?.addEventListener("click",()=>{ yaw=0; pitch=0; dist=2.2; updateCam(); setStatus("3D: view = Front"); });
-    $("#btnExplode")?.addEventListener("click",()=>{ exploded=!exploded; applyExplode(); });
-    $("#btnShot")   ?.addEventListener("click",()=>{ renderer.render(scene,camera); const url=renderer.domElement.toDataURL("image/png"); const a=document.createElement("a"); a.href=url; a.download="3xmeri_3d.png"; document.body.appendChild(a); a.click(); a.remove(); setStatus("3D: screenshot ✓"); });
+    $("btnIso")    ?.addEventListener("click",()=>{ yaw=Math.PI*0.75; pitch=Math.atan(0.6); dist=2.2; updateCam(); setStatus("3D: view = Iso"); });
+    $("btnTop")    ?.addEventListener("click",()=>{ yaw=0; pitch=-Math.PI/2-0.001; dist=2.2; updateCam(); setStatus("3D: view = Top"); });
+    $("btnFront")  ?.addEventListener("click",()=>{ yaw=Math.PI; pitch=0; dist=2.2; updateCam(); setStatus("3D: view = Front"); });
+    $("btnExplode")?.addEventListener("click",()=>{ exploded=!exploded; applyExplode(); });
+    $("btnShot")   ?.addEventListener("click",()=>{ renderer.render(scene,camera); const url=renderer.domElement.toDataURL("image/png"); const a=document.createElement("a"); a.href=url; a.download="3xmeri_3d.png"; document.body.appendChild(a); a.click(); a.remove(); setStatus("3D: screenshot ✓"); });
 
     animate();
     setStatus("3D: inicijalizovano — čekam podatke iz app.js");
@@ -150,22 +141,16 @@
     const a=new THREE.Vector3(x0,y0+0.001,z0), b=new THREE.Vector3(x0+W,y0+0.001,z0);
     const t=0.012, g=new THREE.Group();
     g.add(line([a,b]));
-    g.add(line([a.clone().add(new THREE.Vector3(0, t,0)), a.clone().add(new THREE.Vector3(0,-t,0))]));
-    g.add(line([b.clone().add(new THREE.Vector3(0, t,0)), b.clone().add(new THREE.Vector3(0,-t,0))]));
     const sp=sprite(label, 0.40); sp.position.set((x0+W/2), y0+0.03, z0); g.add(sp);
     return g;
   }
   function dimY(x0,y0,z0,H,label){
-    const a=new THREE.Vector3(x0,y0,z0+0.001), b=new THREE.Vector3(x0,y0+H,z0+0.001);
-    const t=0.012, g=new THREE.Group();
-    g.add(line([a,b]));
-    g.add(line([a.clone().add(new THREE.Vector3( t,0,0)), a.clone().add(new THREE.Vector3(-t,0,0))]));
-    g.add(line([b.clone().add(new THREE.Vector3( t,0,0)), b.clone().add(new THREE.Vector3(-t,0,0))]));
+    const a=new THREE.Vector3(x0,y0,z0), b=new THREE.Vector3(x0,y0+H,z0);
+    const g=new THREE.Group(); g.add(line([a,b]));
     const sp=sprite(label, 0.40); sp.position.set(x0-0.03, y0+H/2, z0+0.001); g.add(sp);
     return g;
   }
 
-  // ===== Build
   function buildFromApp(cfg, order, solved){
     clear(root); clear(dimsGroup);
     let x=0, built=0;
@@ -182,18 +167,12 @@
       const carc=new THREE.Mesh(new THREE.BoxGeometry(W,Hc,D), matCar);
       carc.position.set(W/2,Hc/2,D/2); g.add(carc); addOutline(carc, 0x88a6ff);
 
-      // frontovi od vrha nadole — NA PREDNJU RAVAN (z = D + t/2)
-      const tFront=Math.max(0.012, 18*MM), zFrontFace=D;
-      let remainingY=Hc;
-      (sol?.fronts||[]).forEach((fh,j)=>{
-        const fH=fh*MM;
-        remainingY-=fH;
-        const front=new THREE.Mesh(new THREE.BoxGeometry(W,fH,tFront), matFr);
-        const zBase = zFrontFace + tFront/2;
-        front.position.set(W/2, remainingY+fH/2, zBase);
-        front.userData={_zBase:zBase,_isFront:true};
-        g.add(front); addOutline(front, 0xbfd6ff);
-        if(j<(sol?.gaps?.length||0)) remainingY-=gap;
+      // frontovi (po dubini ih guramo napred iz baze)
+      let zBase=D+0.001;
+      (sol?.fronts||[]).forEach((fh,fi)=>{
+        const front=new THREE.Mesh(new THREE.BoxGeometry(W,fh*MM,0.018), matFront);
+        front.position.set(W/2, (fi===0? fh*MM/2 : (sol.fronts.slice(0,fi).reduce((a,b)=>a+b,0)*MM + fi*gap*MM + fh*MM/2)), zBase);
+        front.userData._isFront=true; front.userData._zBase=zBase; g.add(front); addOutline(front, 0xffffff);
       });
 
       // kote
@@ -228,6 +207,10 @@
       window.recompute=function(){ const r=orig?orig():null; if(r) buildFromApp(r.cfg,r.order,r.solved); return r; };
     }catch(e){ setStatus("3D: greška u povezivanju — "+e.message); }
   }
+
+  const MM=0.001;
+  const matCar = new THREE.MeshStandardMaterial({ color: 0x2a2f3a, metalness: 0.2, roughness: 0.85 });
+  const matFront = new THREE.MeshStandardMaterial({ color: 0x555b66, metalness: 0.05, roughness: 0.9 });
 
   window.addEventListener("DOMContentLoaded", ()=>{ init(); hookApp(); });
 })();
