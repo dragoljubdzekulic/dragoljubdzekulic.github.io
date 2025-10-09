@@ -97,6 +97,7 @@
   <div class="card">
     <h2>4) 3D prikaz (beta)</h2>
     <div id="viewer3d" style="height: 380px; background:#0b0e14; border:1px solid #222833; border-radius:8px;"></div>
+    <div id="viewer3d-status" class="small" style="margin-top:6px; color:#9aa0a6;">status: init…</div>
     <div class="small" style="margin-top:6px;">Gestovi: prstima rotiraj/pomeraj, štipanjem zumiraj. Na desktopu: miš + točkić.</div>
   </div>
 
@@ -143,13 +144,10 @@
   </div>
 </main>
 
-<!-- App logic (mora prvo) -->
-<script src="app.js?v=7"></script>
+<script src="app.js?v=9"></script>
+<script src="assets/three.min.js?v=r159"></script>
+<script src="viewer3d.nomodule.v4.js?v=9"></script>
 
-<!-- Three.js LOKALNO (bez OrbitControls) -->
-<script src="assets/three.min.js?v=1"></script>
-
-<!-- Naš 3D viewer sa ugrađenim kontrolama i statusom -->
-<script src="viewer3d.nomodule.v3.js?v=7"></script>
+  
 </body>
 </html>
