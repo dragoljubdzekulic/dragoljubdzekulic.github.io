@@ -22,7 +22,7 @@
     h1{font-size:20px; margin:14px 0 12px}
     h2{font-size:16px; margin:0 0 8px}
     .wrap{max-width:1100px; margin:0 auto; padding:14px}
-    .grid{display:grid; grid-template-columns: 1fr 1fr; gap:12px}
+    .grid{display:flex; flex-direction:column; gap:12px}
     .card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px}
     .small{color:var(--muted); font-size:13px}
     .flex{display:flex; gap:8px; align-items:center}
@@ -42,8 +42,20 @@
   <div class="wrap">
     <h1>3xMeri – Frontend kalkulator elemenata</h1>
 
+    <!-- STICKY KONTROLE: globalni toolbar za rekalkulaciju i 3D -->
+    <div class="card sticky" id="topToolbar" style="position:sticky; top:8px; z-index:10; display:flex; gap:8px; align-items:center;">
+      <button id="btnRun">Recompute</button>
+      <button id="btnReset">Reset JSON</button>
+      <span class="spacer" style="flex:1"></span>
+      <button id="btnIso">Iso</button>
+      <button id="btnTop">Top</button>
+      <button id="btnFront">Front</button>
+      <button id="btnExplode">Explode</button>
+      <button id="btnShot">Screenshot</button>
+    </div>
+
     <div class="grid">
-      <div class="card">
+      <div class="card" style="order:15">
         <h2>0) Izbor elemenata (gradi Order)</h2>
         <div id="catalog" class="flex" style="flex-wrap:wrap">
           <button data-type="drawer_3">➕ Drawer 3</button>
@@ -51,21 +63,23 @@
           <button data-type="sink_1door">➕ Sink 1D</button>
           <button data-type="dishwasher_60">➕ Dishwasher 60</button>
           <button data-type="oven_housing">➕ Oven housing</button>
+          <span style="width:10px"></span>
+          <button data-type="wall_1door">➕ Viseći 1D</button>
+          <button data-type="wall_open">➕ Viseći otvoren</button>
         </div>
         <div id="builderList" class="small" style="margin-top:8px"></div>
-      </div>
-      <div class="card">
-        <h2>1) Ulaz (JSON)</h2>
-        <div class="flex toolbar">
-          <button id="btnRun">Recompute</button>
-          <button id="btnReset">Reset JSON</button>
-          <span class="spacer"></span>
-          <button id="btnIso">Iso</button>
-          <button id="btnTop">Top</button>
-          <button id="btnFront">Front</button>
-          <button id="btnExplode">Explode</button>
-          <button id="btnShot">Screenshot</button>
+        <div class="small" style="margin-top:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+          <label>Visina korpusa H_carcass (mm): <input id="inpHCarcass" type="number" style="width:100px"></label>
+          <label>Dubina korpusa (mm): <input id="inpDepth" type="number" style="width:100px"></label>
+          <label>Ukupna dužina kuhinje (mm): <input id="inpTotalLen" type="number" style="width:120px" placeholder="npr. 3000"></label>
+          <span id="lenInfo" class="small" style="opacity:.85"></span>
+          <label>H visećih (mm): <input id="inpHWall" type="number" style="width:100px" placeholder="npr. 720"></label>
+          <label>Donja ivica visećih (mm): <input id="inpWallBottom" type="number" style="width:140px" placeholder="npr. 1450"></label>
+          <label>Dubina visećih (mm): <input id="inpWallDepth" type="number" style="width:110px" placeholder="npr. 320"></label>
         </div>
+      </div>
+      <div class="card" id="cardJson" style="display:none"><h2>1) Ulaz (JSON)</h2>
+        <div style="margin-bottom:6px; color:#9aa0a6" class="small">JSON ulaz (skriven panel).</div>
         <textarea id="jsonInput">{
   "Kitchen": {
     "H_total": 900,
@@ -85,19 +99,16 @@
         <div id="msg" class="small"></div>
       </div>
 
-      <div class="card">
-        <h2>2) Proračun elemenata (preview)</h2>
+      <div class="card" style="order:30"><h2>2) Proračun elemenata (preview)</h2>
         <div id="elements" class="flex" style="flex-wrap:wrap"></div>
       </div>
 
-      <div class="card" style="grid-column: 1 / -1;">
-        <h2>3) 3D prikaz</h2>
+      <div class="card" style="order:10; position:sticky; top:64px; z-index:5"><h2>3) 3D prikaz</h2>
         <div id="viewer3d" style="height: 380px; background:#0b0e14; border:1px solid #222833; border-radius:8px;"></div>
         <div id="viewer3d-status" class="small" style="margin-top:6px; color:#9aa0a6;">status: init…</div>
       </div>
 
-      <div class="card">
-        <h2>4) BOM (krojne liste frontova + korpusa) – agregat</h2>
+      <div class="card" style="order:40"><h2>4) BOM (krojne liste frontova + korpusa) – agregat</h2>
         <div class="flex" style="justify-content: space-between; gap:8px; margin-bottom:8px;">
           <div class="flex">
             <button id="btnCsv">Preuzmi CSV</button>
@@ -108,19 +119,35 @@
         <div id="bom"></div>
       </div>
 
-      <div class="card">
-        <h2>5) CSV preview</h2>
+      <div class="card" style="order:55"><h2>8) Budžetski obračun</h2>
+        <div class="small" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:8px">
+          <label>Cena korpus materijala (RSD/m²): <input id="pCarcassM2" type="number" style="width:110px" placeholder="npr. 1200"></label>
+          <label>Cena front materijala (RSD/m²): <input id="pFrontM2" type="number" style="width:110px" placeholder="npr. 2500"></label>
+          <label>Cena šarke (RSD/kom): <input id="pHinge" type="number" style="width:100px" placeholder="npr. 250"></label>
+          <label>Cena šine (RSD/par): <input id="pRail" type="number" style="width:100px" placeholder="npr. 1200"></label>
+          <label>Cena ručice (RSD/kom): <input id="pHandle" type="number" style="width:100px" placeholder="npr. 600"></label>
+          <label>Cena šrafa (RSD/kom): <input id="pScrew" type="number" style="width:100px" placeholder="npr. 5"></label>
+          <label>Cena ABS trake (RSD/m): <input id="pAbsLm" type="number" style="width:110px" placeholder="npr. 60"></label>
+          <label>Cena nogice (RSD/kom): <input id="pLeg" type="number" style="width:110px" placeholder="npr. 150"></label>
+          <span class="small" style="opacity:.8">Pretpostavke: 2 šarke/vrata, 1 par šina/fioku, 1 ručica po frontu, ~50 šrafova po donjem i 30 po visećem korpusu. Linijski metri ABS-a se računaju iz BOM ivica (2L/2S...).</span>
+        </div>
+        <div id="budget"></div>
+      </div>
+
+      <div class="card" style="order:100"><h2>5) CSV preview</h2>
         <textarea id="csvRaw" class="mono" readonly></textarea>
       </div>
 
-      <div class="card">
-        <h2>6) Globalne vrednosti</h2>
+      <div class="card" style="order:50"><h2>6) Globalne vrednosti</h2>
         <div id="globals" class="small"></div>
       </div>
 
-      <div class="card">
-        <h2>7) Validacije</h2>
+      <div class="card" style="order:60"><h2>7) Validacije</h2>
         <div id="valid" class="small"></div>
+      </div>
+    </div>
+      <div class="card" style="order:110; text-align:right">
+        <button id="btnToggleJson">Prikaži/Skrij JSON</button>
       </div>
     </div>
   </div>

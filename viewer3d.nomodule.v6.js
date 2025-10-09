@@ -10,11 +10,11 @@
   let scene, camera, renderer, root, dimsGroup;
   // kontrole (naša orbita)
   let dragging=false, lastX=0, lastY=0;
-  let yaw=Math.PI, pitch=Math.atan(0.6), dist=2.2;
+  let yaw=0.0, pitch=Math.atan(0.6), dist=2.2;
   const center = new THREE.Vector3(0,0.35,0);
 
   // explode
-  let exploded=false, explodeOffset=-0.08; // povuci frontove ka kameri (negativan Z)
+  let exploded=false, explodeOffset=0.08; // povuci frontove ka kameri (negativan Z)
 
   function init(){
     const host = $("viewer3d"); if(!host){ setStatus("Nema #viewer3d"); return; }
@@ -67,9 +67,9 @@
     });
 
     // dugmad
-    $("btnIso")    ?.addEventListener("click",()=>{ yaw=Math.PI*0.75; pitch=Math.atan(0.6); dist=2.2; updateCam(); setStatus("3D: view = Iso"); });
-    $("btnTop")    ?.addEventListener("click",()=>{ yaw=0; pitch=-Math.PI/2-0.001; dist=2.2; updateCam(); setStatus("3D: view = Top"); });
-    $("btnFront")  ?.addEventListener("click",()=>{ yaw=Math.PI; pitch=0; dist=2.2; updateCam(); setStatus("3D: view = Front"); });
+    $("btnIso")    ?.addEventListener("click",()=>{ yaw=Math.PI*0.25; pitch=Math.atan(0.6); dist=2.2; updateCam(); setStatus("3D: view = Iso"); });
+    $("btnTop")    ?.addEventListener("click",()=>{ yaw=0; pitch=Math.PI/2-0.001; dist=2.2; updateCam(); setStatus("3D: view = Top"); });
+    $("btnFront")  ?.addEventListener("click",()=>{ yaw=0; pitch=0; dist=2.2; updateCam(); setStatus("3D: view = Front"); });
     $("btnExplode")?.addEventListener("click",()=>{ exploded=!exploded; applyExplode(); });
     $("btnShot")   ?.addEventListener("click",()=>{ renderer.render(scene,camera); const url=renderer.domElement.toDataURL("image/png"); const a=document.createElement("a"); a.href=url; a.download="3xmeri_3d.png"; document.body.appendChild(a); a.click(); a.remove(); setStatus("3D: screenshot ✓"); });
 
@@ -156,22 +156,27 @@
     clear(root);
     if(dimsGroup){ scene.remove(dimsGroup); }
     dimsGroup = new THREE.Group(); scene.add(dimsGroup);
-    let x=0, built=0;
+    let xBase=0, xWall=0, built=0;
     const gap = (KC.Gap ?? 2)*MM;
+    const wall = KC.Wall || {};
+    const wallBottom = (wall.Bottom ?? 1450)*MM;
 
     (order||[]).forEach((it,i)=>{
       const sol=solved?.[i];
-      const W=(it.width||600)*MM, D=(it.depth||KC.Defaults?.CarcassDepth||560)*MM;
-      const Hc=( (sol?.H_carcass ?? ((KC.H_total||900)-(KC.H_plinth||110)-(KC.T_top||38))) )*MM;
+      const isWall = (it.type||'').startsWith('wall_');
+      const W=(it.width||600)*MM;
+      const D=(isWall ? (it.depth||wall?.Defaults?.CarcassDepth||320) : (it.depth||KC.Defaults?.CarcassDepth||560))*MM;
+      const Hc=( (sol?.H_carcass ?? (isWall ? (wall.H_carcass||720) : ((KC.H_total||900)-(KC.H_plinth||110)-(KC.T_top||38)))) )*MM;
 
-      const g=new THREE.Group(); g.position.set(x,0,0); root.add(g);
+      const x = isWall ? xWall : xBase;
+      const g=new THREE.Group(); g.position.set(x, isWall? wallBottom:0, 0); root.add(g);
 
       // korpus
       const carc=new THREE.Mesh(new THREE.BoxGeometry(W,Hc,D), matCar);
       carc.position.set(W/2,Hc/2,D/2); g.add(carc); addOutline(carc, 0x88a6ff);
 
       // frontovi (pozicioniranje odozgo nadole)
-      let zBase=0.001; // front lica na z≈0 (ka kameri)
+      let zBase=D+0.001; // front lica na z≈D (ispred korpusa)
       let acc=0;
       (sol?.fronts||[]).forEach((fh,fi)=>{
         const fhm = fh*MM;
@@ -184,10 +189,11 @@
       });
 
       // kote
-      dimsGroup.add(dimX(x,0,D+0.03, W, `${Math.round(W/MM)}mm`));
-      dimsGroup.add(dimY(x-0.03,0,0,  Hc, `${Math.round(Hc/MM)}mm`));
+      const baseY = isWall? wallBottom:0;
+      dimsGroup.add(dimX(x,baseY, D+0.03, W, `${Math.round(W/MM)}mm`));
+      dimsGroup.add(dimY(x-0.03,baseY,0,  Hc, `${Math.round(Hc/MM)}mm`));
 
-      x+=W+0.03; built++;
+      if(isWall) xWall += W+0.03; else xBase += W+0.03; built++;
     });
 
     applyExplode();
