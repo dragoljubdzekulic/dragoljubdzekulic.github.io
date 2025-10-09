@@ -9,7 +9,7 @@
   let scene, camera, renderer, root, dimsGroup;
   let dragging=false, lastX=0, lastY=0, yaw=Math.PI/4, pitch=Math.atan(0.6), dist=2.2;
   const center = new THREE.Vector3(0,0.35,0);
-  let exploded=false; const explodeOffset=-0.08; // 80mm
+  let exploded=false; const explodeOffset=0.08; // 80mm
   const MM=0.002;
 
   const matCar = new THREE.MeshLambertMaterial({ color: 0x8a8f9a });
@@ -129,14 +129,15 @@
     g.add(makeSprite(label, x0-0.02, y0+H/2, z0+0.001)); return g;
   }
 
-  function applyExplode(){
-    root.traverse(o=>{
-      if(o.userData && o.userData._zBase!=null && o.userData._isFront){
-        o.position.z = exploded ? (o.userData._zBase + explodeOffset) : o.userData._zBase;
-      }
-    });
-    setStatus("3D: explode = " + (exploded ? "ON" : "OFF"));
-  }
+  function applyExplode() {
+  root.traverse(o => {
+    if (o.userData && o.userData._isFront) {
+      o.position.z = exploded ? (o.userData._zBase + explodeOffset) : o.userData._zBase;
+    }
+  });
+  setStatus("3D: explode = " + (exploded ? "ON" : "OFF"));
+}
+
 
   function buildFromApp(cfg, order, solved){
     clear(root); clear(dimsGroup);
