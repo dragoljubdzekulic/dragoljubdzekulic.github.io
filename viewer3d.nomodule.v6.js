@@ -102,12 +102,12 @@
 
   // ===== Outline helper
   function addOutline(mesh, color=0x6ea8ff){
-    const eg = new THREE.EdgesGeometry(mesh.geometry, 30); // thresholdAngle
+    const eg = new THREE.EdgesGeometry(mesh.geometry, 30);
     const ls = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color }));
-    ls.position.copy(mesh.position);
-    ls.rotation.copy(mesh.rotation);
-    ls.scale.copy(mesh.scale);
-    mesh.parent.add(ls);
+    ls.position.set(0,0,0);
+    ls.rotation.set(0,0,0);
+    ls.scale.set(1,1,1);
+    mesh.add(ls); // outline je dete meša, pa prati pomeranje (explode itd.)
   }
 
   // ===== Dimension helpers (veće i skaliraju se)
@@ -152,16 +152,17 @@
   }
 
   function buildFromApp(cfg, order, solved){
+    const KC = (cfg && (cfg.Kitchen || cfg.kitchen)) || {};
     clear(root);
     if(dimsGroup){ scene.remove(dimsGroup); }
     dimsGroup = new THREE.Group(); scene.add(dimsGroup);
     let x=0, built=0;
-    const gap = (cfg?.Kitchen?.Gap ?? 2)*MM;
+    const gap = (KC.Gap ?? 2)*MM;
 
     (order||[]).forEach((it,i)=>{
       const sol=solved?.[i];
-      const W=(it.width||600)*MM, D=(it.depth||cfg?.Kitchen?.Defaults?.CarcassDepth||560)*MM;
-      const Hc=(sol?.H_carcass ?? ((cfg?.Kitchen?.H_total||900)-(cfg?.Kitchen?.H_plinth||110)-(cfg?.Kitchen?.T_top||38)))*MM;
+      const W=(it.width||600)*MM, D=(it.depth||KC.Defaults?.CarcassDepth||560)*MM;
+      const Hc=( (sol?.H_carcass ?? ((KC.H_total||900)-(KC.H_plinth||110)-(KC.T_top||38))) )*MM;
 
       const g=new THREE.Group(); g.position.set(x,0,0); root.add(g);
 
@@ -169,10 +170,16 @@
       const carc=new THREE.Mesh(new THREE.BoxGeometry(W,Hc,D), matCar);
       carc.position.set(W/2,Hc/2,D/2); g.add(carc); addOutline(carc, 0x88a6ff);
 
-      // frontovi (po dubini ih guramo napred iz baze)
-      let zBase=D+0.001;
+      // frontovi (pozicioniranje odozgo nadole)
+      let zBase=D+0.001; let acc=0;
       (sol?.fronts||[]).forEach((fh,fi)=>{
-        const front=new THREE.Mesh(new THREE.BoxGeometry(W,fh*MM,0.018), matFront);
+        const fhm = fh*MM;
+        const front=new THREE.Mesh(new THREE.BoxGeometry(W,fhm,0.018), matFront);
+        const yCenter = (Hc - (acc + fhm/2));
+        front.position.set(W/2, yCenter, zBase);
+        front.userData._isFront=true; front.userData._zBase=zBase; g.add(front); addOutline(front, 0xffffff);
+        acc += fhm + (fi < (sol.fronts.length-1) ? gap : 0);
+      });
         front.position.set(W/2, (fi===0? fh*MM/2 : (sol.fronts.slice(0,fi).reduce((a,b)=>a+b,0)*MM + fi*gap*MM + fh*MM/2)), zBase);
         front.userData._isFront=true; front.userData._zBase=zBase; g.add(front); addOutline(front, 0xffffff);
       });
