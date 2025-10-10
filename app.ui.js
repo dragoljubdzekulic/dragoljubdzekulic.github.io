@@ -1,6 +1,7 @@
+/* HSPLIT v1 */
 // UI glue: render previews, handle builder, call core/bom/budget
 (function(){
-  console.log('viewer3d.nomodule.v6.js v14 loaded');
+  console.log('app.ui.js HSPLIT v1 loaded');
   // build: v13 cache-bust
   console.log('viewer3d.nomodule.v6.js v13 loaded');
 const $ = s => document.querySelector(s);
@@ -8,12 +9,24 @@ const $ = s => document.querySelector(s);
 function renderElementSVG(res,w=120,ppm=0.35){
   const tot=res.H_carcass*ppm; let y=0;
   let s=`<svg width="${w}" height="${Math.round(tot)}" viewBox="0 0 ${w} ${Math.round(tot)}" xmlns="http://www.w3.org/2000/svg">`;
-  res.fronts.forEach((h,i)=>{
-    const hp=h*ppm;
-    s+=`<rect x="0" y="${y}" width="${w}" height="${hp}" fill="white" stroke="black"/>`;
-    s+=`<text x="${w/2}" y="${y+hp/2}" font-size="10" text-anchor="middle" dominant-baseline="middle">${Math.round(h)}mm</text>`;
-    y+=hp; if(i<res.gaps.length){const gp=res.gaps[i]*ppm; s+=`<rect x="${w*0.1}" y="${y}" width="${w*0.8}" height="${gp}" fill="lightgray"/>`; y+=gp;}
-  });
+  if (res && res.doors===2){
+    const halfW = w/2; let y=0;
+    (res.fronts && res.fronts.length ? res.fronts : [res.H_carcass||0]).forEach((h,i)=>{
+      const hp=h*ppm;
+      // left/right doors
+      s+=`<rect x="0" y="${y}" width="${halfW}" height="${hp}" fill="white" stroke="black"/>`;
+      s+=`<rect x="${halfW}" y="${y}" width="${halfW}" height="${hp}" fill="white" stroke="black"/>`;
+      y+=hp; if(i<res.gaps.length){ const gp=res.gaps[i]*ppm; s+=`<rect x="${w*0.1}" y="${y}" width="${w*0.8}" height="${gp}" fill="lightgray"/>`; y+=gp; }
+    });
+  } else {
+    let y=0;
+    (res.fronts && res.fronts.length ? res.fronts : [res.H_carcass||0]).forEach((h,i)=>{
+      const hp=h*ppm;
+      s+=`<rect x="0" y="${y}" width="${w}" height="${hp}" fill="white" stroke="black"/>`;
+      s+=`<text x="${w/2}" y="${y+hp/2}" font-size="10" text-anchor="middle" dominant-baseline="middle">${Math.round(h)}mm</text>`;
+      y+=hp; if(i<res.gaps.length){const gp=res.gaps[i]*ppm; s+=`<rect x="${w*0.1}" y="${y}" width="${w*0.8}" height="${gp}" fill="lightgray"/>`; y+=gp;}
+    });
+  }
   return s+`</svg>`;
 }
 

@@ -1,3 +1,4 @@
+/* HSPLIT v1 */
 // viewer3d.nomodule.v6.js — bolji kontrast + outline ivice + veće/skalirajuće kote
 (function(){
   const $ = id => document.getElementById(id);
@@ -181,12 +182,27 @@
       // frontovi (pozicioniranje odozgo nadole)
       let zBase=D+0.001; // front lica na z≈D (ispred korpusa)
       let acc=0;
-      (sol?.fronts||[]).forEach((fh,fi)=>{
+      
+      ((sol && sol.fronts && sol.fronts.length ? sol.fronts : [sol?.H_carcass||0]) ).forEach((fh,fi)=>{
         const fhm = fh*MM;
-        const front=new THREE.Mesh(new THREE.BoxGeometry(W,fhm,0.018), matFront);
         const yCenter = (Hc - (acc + fhm/2));
-        front.position.set(W/2, yCenter, zBase);
-        front.userData._isFront=true; front.userData._zBase=zBase; g.add(front); addOutline(front, 0xffffff);
+
+        const addFront = (w, xCenter) => {
+          const front = new THREE.Mesh(new THREE.BoxGeometry(w, fhm, 0.018), matFront);
+          front.position.set(xCenter, yCenter, zBase);
+          front.userData._isFront = true; front.userData._zBase = zBase;
+          g.add(front); addOutline(front, 0xffffff);
+          return front;
+        };
+
+        if (sol?.doors === 2) {
+          const eachW = W/2;
+          addFront(eachW, eachW/2);           // left door
+          addFront(eachW, eachW + eachW/2);   // right door
+        } else {
+          addFront(W, W/2);
+        }
+
 
         // === vizuelizacija fioka (unutrašnje kutije) ===
         const hasDrawers = (it.type==='drawer_3' || it.type==='combo_drawer_door' || it.type==='oven_housing');

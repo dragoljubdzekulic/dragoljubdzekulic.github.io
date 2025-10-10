@@ -24,6 +24,9 @@ App.Core.solveItem = function(k,it){
     case 'drawer_3':{ const second=(it.drawerHeights && it.drawerHeights[1]!=null)? Number(it.drawerHeights[1]) : 200; let third = H - FIRST - second - 2*gap; if(third<0){ res.notes.push('Treća fioka < 0 — proveri ulaz'); third=0; } res.fronts.push(FIRST); pushGap(); res.fronts.push(second); pushGap(); res.fronts.push(third); break; }
     case 'drawer_2':{ const f1=FIRST; const f2=H - f1 - gap; res.fronts.push(f1); pushGap(); res.fronts.push(f2); break; }
     case 'wall_1door':{ res.fronts.push(H); break; }
+    case 'wall_double':{ res.fronts.push(H); res.doors = 2; break; }
+    case 'base_2door':{ res.fronts.push(H); res.doors = 2; break; }
+
     case 'wall_open':{ break; }
     case 'wall_open_shelf':{ break; }
     default: res.notes.push('Nepoznat tip: '+it.type);

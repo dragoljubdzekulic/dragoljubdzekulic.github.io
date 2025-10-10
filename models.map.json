@@ -1,0 +1,114 @@
+{
+  "rules": [
+    {
+      "match": "^DonjiElemLadičar(1M2S|2M1V|2V|4M)-(?P<W>40|45|50|60)-W$",
+      "type": "base_drawer",
+      "params": {
+        "pattern": "$1",
+        "width_mm": "$W00"
+      }
+    },
+    {
+      "match": "^DonjiElemUgrSudomasina-(?P<W>45|60)-W$",
+      "type": "base_dishwasher_full",
+      "params": {
+        "width_mm": "$W00"
+      }
+    },
+    {
+      "match": "^DonjiElemPoluUgrSudomasina-(?P<W>45|60)-W$",
+      "type": "base_dishwasher_half",
+      "params": {
+        "width_mm": "$W00"
+      }
+    },
+    {
+      "match": "^DonjiElemRerna-W$",
+      "type": "base_oven_housing",
+      "params": {}
+    },
+    {
+      "match": "^DonjiElemUgrMaliFrižider-(?P<W>60)-W$",
+      "type": "base_small_fridge",
+      "params": {
+        "width_mm": "$W00"
+      }
+    },
+    {
+      "match": "^GornjiElemJednokrilni36-(?P<W>\\d+)(-staklo)?-W$",
+      "type": "wall_single",
+      "params": {
+        "H": 360,
+        "width_mm": "$W00",
+        "glass": "$2?true:false"
+      }
+    },
+    {
+      "match": "^GornjiElemJednokrilni72-(?P<W>\\d+)(-staklo)?-W$",
+      "type": "wall_single",
+      "params": {
+        "H": 720,
+        "width_mm": "$W00",
+        "glass": "$2?true:false"
+      }
+    },
+    {
+      "match": "^GornjiElemDvokrilni72-(?P<W>\\d+)(-staklo)?-W$",
+      "type": "wall_double",
+      "params": {
+        "H": 720,
+        "width_mm": "$W00",
+        "glass": "$2?true:false"
+      }
+    },
+    {
+      "match": "^GornjiElemOtvorenaPolica36-(?P<W>\\d+)-W$",
+      "type": "wall_open_shelf",
+      "params": {
+        "H": 360,
+        "width_mm": "$W00"
+      }
+    },
+    {
+      "match": "^GornjiElemOtvorenaPolica72-(?P<W>\\d+)-W$",
+      "type": "wall_open_shelf",
+      "params": {
+        "H": 720,
+        "width_mm": "$W00"
+      }
+    },
+    {
+      "match": "^GornjiElemUgaoni72-(?P<W>\\d+)(-staklo)?-W$",
+      "type": "wall_corner",
+      "params": {
+        "H": 720,
+        "width_mm": "$W00",
+        "glass": "$2?true:false"
+      }
+    },
+    {
+      "match": "^(Jednokrilni|Dvokrilni)GornjiElemAspKlasik60-(?P<W>\\d+)-W$",
+      "type": "wall_hood_classic",
+      "params": {
+        "H": 600,
+        "width_mm": "$W00"
+      }
+    },
+    {
+      "match": "^(Jednokrilni|Dvokrilni)GornjiElemAspUgradni68-60-W$",
+      "type": "wall_hood_built_in",
+      "params": {
+        "H": 680,
+        "width_mm": 600
+      }
+    },
+    {
+      "match": "^VisokiElemDodatak(Jednokrilni|Dvokrilni)-72-W$",
+      "type": "tall_addon",
+      "params": {
+        "H": 720,
+        "doors": "$1=='Jednokrilni'?'single':'double'"
+      }
+    }
+  ]
+}
