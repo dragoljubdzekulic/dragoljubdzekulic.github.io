@@ -6,8 +6,20 @@ App.BOM.bomForItem = function(cfg,it,sol){
   const isWall = (it.type||'').startsWith('wall_');
   const out=[]; const matFront="MDF_Lak", thFront=18, edgeFront="2L+2S", wf=(it.width??600)-4;
   // FRONTOVI
-  sol.fronts.forEach((h,i)=>out.push({itemId:it.id,part:`FRONT-${i+1}`,qty:1,w:wf,h:Math.round(h),th:thFront,edge:edgeFront,material:matFront,notes:""}));
-  // KORPUS (PB18_White)
+  if (sol && sol.doors === 2) {
+    const DOOR_GAP_MM = 2; // total center gap between doors
+    const wf = (it.width ?? 600) - 4; // existing side clearance in project
+    const eachW = Math.round((wf - DOOR_GAP_MM) / 2);
+    (sol.fronts && sol.fronts.length ? sol.fronts : [sol.H_carcass||0]).forEach((h,i)=>{
+      const hh = Math.round(h);
+      out.push({itemId:it.id,part:`FRONT-L`,qty:1,w:eachW,h:hh,th:thFront,edge:edgeFront,material:matFront,notes:""});
+      out.push({itemId:it.id,part:`FRONT-R`,qty:1,w:eachW,h:hh,th:thFront,edge:edgeFront,material:matFront,notes:""});
+    });
+  } else {
+    const wf = (it.width ?? 600) - 4;
+    (sol.fronts || []).forEach((h,i)=>out.push({itemId:it.id,part:`FRONT`,qty:1,w:wf,h:Math.round(h),th:thFront,edge:edgeFront,material:matFront,notes:""}));
+  }
+// KORPUS (PB18_White)
   const t=WDEF.SideThickness??18;
   const d=isWall ? (it.depth??WDEF_WALL.CarcassDepth??320) : (it.depth??WDEF.CarcassDepth??560);
   const H=sol.H_carcass, netW=(it.width??600)-2*t;
