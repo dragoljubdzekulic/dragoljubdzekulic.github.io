@@ -1,6 +1,7 @@
-/* app.ui.js – v2.5
+/* app.ui.js – v2.6
  * Bezbedan start (čeka App.Core), inicijalni JSON bootstrap,
- * dinamička etiketa visine, BOM/Budget/3D integracija + Budget table beautify.
+ * dinamička etiketa visine, BOM/Budget/3D integracija + Budget table beautify,
+ * + Save/Open .3xmeri projekata (zamena za Reset/Recompute dugmad).
  */
 (function(){
   const log = (...a)=>console.log('[ui]', ...a);
@@ -57,6 +58,61 @@
     K.Wall     = K.Wall     || {};
     K.Wall.Defaults = K.Wall.Defaults || {};
     return { cfg, K, key };
+  }
+
+  // ---------- Save / Open .3xmeri ----------
+  function onSaveClick(){
+    try{
+      if (typeof pushBuilderToJSON === 'function') pushBuilderToJSON();
+      const cfg = getConfig();
+      const nameBase = (cfg?.Kitchen?.ProjectName ? String(cfg.Kitchen.ProjectName) : '3xmeri_project');
+      const name = nameBase.endsWith('.3xmeri') ? nameBase : (nameBase + '.3xmeri');
+      const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      const m = document.getElementById('msg'); if(m) m.textContent = 'Sačuvano: ' + name;
+    }catch(e){
+      const m = document.getElementById('msg'); if(m) m.textContent = 'Greška pri čuvanju: ' + e.message;
+    }
+  }
+  function onOpenClick(){
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = '.3xmeri,application/json';
+    inp.addEventListener('change', async () => {
+      const f = inp.files && inp.files[0]; if(!f) return;
+      try{
+        const txt  = await f.text();
+        const data = JSON.parse(txt);
+        setConfig(data);
+        if (typeof syncGlobalsToInputs === 'function') syncGlobalsToInputs();
+        if (typeof syncBuilderFromJSON === 'function') syncBuilderFromJSON();
+        if (typeof renderBuilderList === 'function') renderBuilderList();
+        if (typeof window.recompute === 'function') window.recompute();
+        const m = document.getElementById('msg'); if(m) m.textContent = 'Učitan fajl: ' + (f.name||'');
+      }catch(e){
+        const m = document.getElementById('msg'); if(m) m.textContent = 'Greška pri učitavanju: ' + e.message;
+      }
+    });
+    inp.click();
+  }
+  function initSaveOpenButtons(){
+    // Preimenuj i rebounduj postojeća dugmad
+    const bSave = document.getElementById('btnRun');   // bilo "Recompute"
+    const bOpen = document.getElementById('btnReset'); // bilo "Reset"
+    if (bSave){
+      bSave.textContent = 'Save';
+      bSave.title = 'Sačuvaj .3xmeri projekat';
+      bSave.onclick = onSaveClick;
+    }
+    if (bOpen){
+      bOpen.textContent = 'Open';
+      bOpen.title = 'Otvori .3xmeri projekat';
+      bOpen.onclick = onOpenClick;
+    }
   }
 
   // ---------- Dinamička etiketa visine ----------
@@ -349,8 +405,10 @@
 
   // ---------- Start ----------
   window.addEventListener('DOMContentLoaded', ()=>{
-    log('UI start v2.5');
+    log('UI start v2.6');
     bootstrapIfEmpty();
+    initSaveOpenButtons(); // <— aktiviraj Save/Open na postojećim dugmadima
+
     const cat = $('#catalog'); if(cat) cat.addEventListener('click', onCatalogClick);
 
     // global input handlers
