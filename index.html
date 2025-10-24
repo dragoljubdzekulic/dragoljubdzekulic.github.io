@@ -63,161 +63,90 @@
     }
     #catalog button[data-type]:hover{ transform: translateY(-2px); filter: brightness(1.05); border-color:#30405a; }
     #catalog button[data-type]:focus-visible{ outline:2px solid #2b87ff; outline-offset:2px; }
-
     #catalog button[data-type] .icon{
       width:40px; height:40px; display:block;
       filter: brightness(1); transition: transform .2s ease, filter .2s ease;
     }
     #catalog button[data-type]:hover .icon{ transform: scale(1.08); filter: brightness(1.15); }
-
     #catalog button[data-type] .label{
-      color:#e9eef5 !important;
-      opacity:1 !important;
-      text-shadow:none !important;
-      font-weight:600;
-      line-height:1.15;
-      display:block;
-      margin-top:2px;
+      color:#e9eef5 !important; opacity:1 !important; text-shadow:none !important;
+      font-weight:600; line-height:1.15; display:block; margin-top:2px;
     }
-
-    .globals-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .globals-row input, .globals-row select { height:30px; }
 
     /* --- PRETTY BUILDER LIST --- */
     #builderList { display: flex; flex-direction: column; gap: 8px; }
-
     .builder-row{
-      display: grid;
-      grid-template-columns: minmax(120px, 1fr) minmax(120px,1fr) 120px 120px auto;
-      gap: 8px;
-      align-items: center;
-      background: #0f1726;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 8px 10px;
-      transition: border-color .2s ease, background .2s ease;
+      display:grid; grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) 120px 120px auto;
+      gap:8px; align-items:center; background:#0f1726; border:1px solid var(--line);
+      border-radius:10px; padding:8px 10px; transition:border-color .2s ease, background .2s ease;
     }
     .builder-row:hover{ border-color:#2b87ff33; background:#111b2c; }
-
-    .builder-id{
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: .2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .builder-type{
-      justify-self: start;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .chip{
-      display:inline-flex; align-items:center; gap:6px;
-      background:#0c1526; color:#cfe3ff;
-      border:1px solid #2b3b55;
-      padding:4px 8px; border-radius: 999px;
-      font-size:12px; font-weight:600;
-    }
-
-    .field{
-      display:flex; align-items:center; gap:6px;
-      background:#0a1220; border:1px solid var(--line); border-radius:8px;
-      padding:4px 6px;
-    }
-    .field input{
-      background:transparent; border:0; outline:none; color:var(--text);
-      width: 80px; height: 26px; font-size:13px;
-    }
+    .builder-id{ font-weight:700; color:var(--text); letter-spacing:.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .builder-type{ justify-self:start; display:inline-flex; align-items:center; gap:6px; }
+    .chip{ display:inline-flex; align-items:center; gap:6px; background:#0c1526; color:#cfe3ff; border:1px solid #2b3b55; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+    .field{ display:flex; align-items:center; gap:6px; background:#0a1220; border:1px solid var(--line); border-radius:8px; padding:4px 6px; }
+    .field input{ background:transparent; border:0; outline:none; color:var(--text); width:80px; height:26px; font-size:13px; }
     .unit{ color:var(--muted); font-size:12px; }
-
     .builder-actions{ display:flex; justify-content:flex-end; gap:6px; }
-    .btn-icon{
-      display:inline-flex; align-items:center; justify-content:center;
-      width:28px; height:28px; border-radius:8px;
-      border:1px solid var(--line); background:var(--panel); color:var(--text);
-      cursor:pointer; transition: transform .12s ease, filter .2s ease, border-color .2s ease;
-    }
+    .btn-icon{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; border:1px solid var(--line); background:var(--panel); color:var(--text); cursor:pointer; transition: transform .12s ease, filter .2s ease, border-color .2s ease; }
     .btn-icon:hover{ filter:brightness(1.1); border-color:#30405a; }
     .btn-icon:active{ transform: translateY(1px); }
+    .i-dup::before{ content:"⧉"; font-size:14px; line-height:1; }
+    .i-up::before{ content:"▲"; font-size:10px; position:relative; top:-1px; }
+    .i-down::before{ content:"▼"; font-size:10px; position:relative; top:1px; }
+    .i-del::before{ content:"✕"; font-size:12px; }
+    #lenInfo{ margin-top:6px; padding:6px 8px; background:#0f1726; border:1px solid var(--line); border-radius:8px; color:var(--muted); }
 
-    .i-dup::before{ content: "⧉"; font-size: 14px; line-height: 1; }
-    .i-up::before{ content: "▲"; font-size: 10px; position: relative; top:-1px; }
-    .i-down::before{ content: "▼"; font-size: 10px; position: relative; top:1px; }
-    .i-del::before{ content: "✕"; font-size: 12px; }
-
-    #lenInfo{
-      margin-top: 6px;
-      padding: 6px 8px;
-      background: #0f1726;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      color: var(--muted);
+    /* === BUDGET TABLE BEAUTY SKIN === */
+    #budget{ overflow:auto; }
+    #budget table.budget-table{
+      width:100%; border-collapse:separate; border-spacing:0; background:#0f1726;
+      border:1px solid var(--line); border-radius:10px; overflow:hidden; box-shadow:0 6px 14px rgba(0,0,0,.25);
     }
+    #budget table.budget-table thead th{
+      position:sticky; top:0; z-index:1; background:linear-gradient(180deg,#12203a 0%, #0f1a2f 100%);
+      color:#cfe3ff; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.04em;
+      padding:10px 12px; border-bottom:1px solid #1f2b44;
+    }
+    #budget table.budget-table tbody td, #budget table.budget-table tfoot td{
+      padding:10px 12px; border-bottom:1px solid #1a2336; vertical-align:middle;
+    }
+    #budget table.budget-table tbody tr:nth-child(odd){ background:#0e1626; }
+    #budget table.budget-table tbody tr:hover{ background:#131f33; }
+    #budget table.budget-table td.num, #budget table.budget-table th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+    #budget table.budget-table .muted{ color:var(--muted); }
+    #budget table.budget-table tfoot tr.total-row td, #budget table.budget-table tbody tr.total-row td{
+      background:linear-gradient(180deg,#15223b,#121d33); border-top:1px solid #2b3b55; font-weight:700; color:#e9eef5;
+    }
+    #budget .badge{ display:inline-flex; align-items:center; gap:6px; background:#0c1526; color:#cfe3ff; border:1px solid #2b3b55; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+    @media (max-width:640px){
+      #budget table.budget-table thead th, #budget table.budget-table tbody td{ padding:8px 10px; }
+    }
+
+    /* === KITCHEN PARAMS FORM BEAUTY === */
+    .kitchen-form{ background:#0f1726; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; }
+    .form-header{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .form-header .title{ font-size:14px; font-weight:700; color:#cfe3ff; letter-spacing:.02em; }
+    .form-badges{ margin-left:auto; display:flex; gap:6px; }
+    .badge{ display:inline-flex; align-items:center; gap:6px; background:#0c1526; color:#cfe3ff; border:1px solid #2b3b55; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+
+    .form-grid{ display:grid; grid-template-columns:repeat(4, minmax(180px,1fr)); gap:10px; }
+    .form-group{ border:1px solid var(--line); background:#0b1322; border-radius:10px; padding:10px; }
+    .group-title{ font-size:12px; font-weight:700; color:#9cc7ff; margin-bottom:8px; text-transform:uppercase; letter-spacing:.04em; }
+
+    .field{ display:flex; flex-direction:column; gap:6px; }
+    .field label{ font-size:12px; color:var(--muted); }
+    .control{ display:flex; align-items:center; gap:6px; background:#0a1220; border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
+    .control input, .control select{ background:transparent; border:0; outline:none; color:var(--text); height:28px; font-size:13px; width:100%; }
+    .note-inline{ margin-top:8px; padding:8px 10px; background:#0f1726; border:1px solid var(--line); border-radius:8px; color:var(--muted); }
+
+    @media (max-width:1100px){ .form-grid{ grid-template-columns:repeat(3,minmax(180px,1fr)); } }
+    @media (max-width:840px){  .form-grid{ grid-template-columns:repeat(2,minmax(180px,1fr)); } }
+    @media (max-width:560px){  .form-grid{ grid-template-columns:1fr; } }
 
     /* tab containers */
     .tabpanel{display:none}
     .tabpanel[aria-hidden="false"]{display:block}
-	/* === BUDGET TABLE BEAUTY SKIN === */
-	#budget{ overflow:auto; }
-	#budget table.budget-table{
-	  width:100%;
-	  border-collapse:separate; border-spacing:0;
-	  background:#0f1726;
-	  border:1px solid var(--line);
-	  border-radius:10px;
-	  overflow:hidden; /* u modernim browserima radi na table */
-	  box-shadow: 0 6px 14px rgba(0,0,0,.25);
-	}
-	#budget table.budget-table thead th{
-	  position: sticky; top:0; z-index:1;
-	  background: linear-gradient(180deg,#12203a 0%, #0f1a2f 100%);
-	  color:#cfe3ff;
-	  text-align:left;
-	  font-size:12px; text-transform:uppercase; letter-spacing:.04em;
-	  padding:10px 12px;
-	  border-bottom:1px solid #1f2b44;
-	}
-	#budget table.budget-table tbody td,
-	#budget table.budget-table tfoot td{
-	  padding:10px 12px;
-	  border-bottom:1px solid #1a2336;
-	  vertical-align:middle;
-	}
-	#budget table.budget-table tbody tr:nth-child(odd){ background:#0e1626; }
-	#budget table.budget-table tbody tr:hover{ background:#131f33; }
-
-	#budget table.budget-table td.num,
-	#budget table.budget-table th.num{
-	  text-align:right;
-	  font-variant-numeric: tabular-nums;
-	}
-
-	#budget table.budget-table .muted{ color: var(--muted); }
-
-	#budget table.budget-table tfoot tr.total-row td,
-	#budget table.budget-table tbody tr.total-row td{
-	  background: linear-gradient(180deg,#15223b,#121d33);
-	  border-top:1px solid #2b3b55;
-	  font-weight:700;
-	  color:#e9eef5;
-	}
-
-	#budget .badge{
-	  display:inline-flex; align-items:center; gap:6px;
-	  background:#0c1526; color:#cfe3ff;
-	  border:1px solid #2b3b55;
-	  padding:4px 8px; border-radius:999px; font-size:12px; font-weight:600;
-	}
-
-	/* kompaktno na malim ekranima */
-	@media (max-width: 640px){
-	  #budget table.budget-table thead th,
-	  #budget table.budget-table tbody td{ padding:8px 10px; }
-	}
-
   </style>
 </head>
 <body>
@@ -257,46 +186,16 @@
       <div class="card">
         <h2>Izbor elemenata</h2>
         <div id="catalog" class="catalog-scroll">
-          <button data-type="drawer_3">
-            <span class="icon"></span>
-            <span class="label">Drawer 3</span>
-          </button>
-          <button data-type="drawer_2">
-            <span class="icon"></span>
-            <span class="label">Drawer 2</span>
-          </button>
-          <button data-type="combo_drawer_door">
-            <span class="icon"></span>
-            <span class="label">Combo (fioka+vrata)</span>
-          </button>
-          <button data-type="base_1door">
-            <span class="icon"></span>
-            <span class="label">Base 1D</span>
-          </button>
-          <button data-type="sink_1door">
-            <span class="icon"></span>
-            <span class="label">Sink 1D</span>
-          </button>
-          <button data-type="dishwasher_60">
-            <span class="icon"></span>
-            <span class="label">Dishwasher 60</span>
-          </button>
-          <button data-type="oven_housing">
-            <span class="icon"></span>
-            <span class="label">Oven housing</span>
-          </button>
-          <button data-type="wall_1door">
-            <span class="icon"></span>
-            <span class="label">Viseći 1D</span>
-          </button>
-          <button data-type="wall_open">
-            <span class="icon"></span>
-            <span class="label">Viseći otvoren</span>
-          </button>
-          <button data-type="wall_open_shelf">
-            <span class="icon"></span>
-            <span class="label">Viseći otvoren + police</span>
-          </button>
+          <button data-type="drawer_3"><span class="icon"></span><span class="label">Drawer 3</span></button>
+          <button data-type="drawer_2"><span class="icon"></span><span class="label">Drawer 2</span></button>
+          <button data-type="combo_drawer_door"><span class="icon"></span><span class="label">Combo (fioka+vrata)</span></button>
+          <button data-type="base_1door"><span class="icon"></span><span class="label">Base 1D</span></button>
+          <button data-type="sink_1door"><span class="icon"></span><span class="label">Sink 1D</span></button>
+          <button data-type="dishwasher_60"><span class="icon"></span><span class="label">Dishwasher 60</span></button>
+          <button data-type="oven_housing"><span class="icon"></span><span class="label">Oven housing</span></button>
+          <button data-type="wall_1door"><span class="icon"></span><span class="label">Viseći 1D</span></button>
+          <button data-type="wall_open"><span class="icon"></span><span class="label">Viseći otvoren</span></button>
+          <button data-type="wall_open_shelf"><span class="icon"></span><span class="label">Viseći otvoren + police</span></button>
         </div>
       </div>
 
@@ -305,27 +204,120 @@
         <h2>Lista ubačenih elemenata i podešavanja</h2>
         <div id="builderList" class="small" style="margin-top:4px"></div>
         <div id="lenInfo" class="small" style="margin-top:6px"></div>
-        <div class="small globals-row" style="margin-top:10px;">
-          <label>Visina korpusa H_carcass (mm): <input id="inpHCarcass" type="number" style="width:110px"></label>
-          <label>Dubina korpusa (mm): <input id="inpDepth" type="number" style="width:100px"></label>
-          <label>Debljina radne ploče (mm): <input id="inpTopThickness" type="number" style="width:120px" placeholder="npr. 38"></label>
-          <label>Dubina fioka (standard):
-            <select id="selDrawerDepth" style="width:130px">
-              <option value="450">Plitke (450)</option>
-              <option value="500" selected>Duboke (500)</option>
-              <option value="550">Vrlo duboke (550)</option>
-            </select>
-          </label>
-          <label>Toleranca šina (mm): <input id="inpSlideAllowance" type="number" style="width:120px" placeholder="npr. 26"></label>
-          <label>Ukupna dužina kuhinje (mm): <input id="inpTotalLength" type="number" style="width:120px" placeholder="npr. 3000"></label>
-          <label>H visećih (mm): <input id="inpHWall" type="number" style="width:90px" value="720"></label>
-          <label>Donja ivica visećih (mm): <input id="inpWallBottom" type="number" style="width:110px" value="1450"></label>
-          <label>Dubina visećih (mm): <input id="inpWallDepth" type="number" style="width:100px" value="320"></label>
+
+        <!-- NOVO: uredjeni parametri kuhinje -->
+        <div class="kitchen-form">
+          <div class="form-header">
+            <div class="title">Parametri kuhinje</div>
+            <div class="form-badges">
+              <span class="badge">Donji elementi</span>
+              <span class="badge">Viseći elementi</span>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <!-- Donji elementi -->
+            <div class="form-group">
+              <div class="group-title">Donji elementi</div>
+
+              <div class="field">
+                <label for="inpHCarcass">Visina korpusa (H_carcass)</label>
+                <div class="control">
+                  <input id="inpHCarcass" type="number" placeholder="npr. 720">
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="inpDepth">Dubina korpusa</label>
+                <div class="control">
+                  <input id="inpDepth" type="number" placeholder="npr. 560">
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="inpTopThickness">Debljina radne ploče</label>
+                <div class="control">
+                  <input id="inpTopThickness" type="number" placeholder="38">
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="inpTotalLength">Ukupna dužina kuhinje</label>
+                <div class="control">
+                  <input id="inpTotalLength" type="number" placeholder="npr. 3000">
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fioke -->
+            <div class="form-group">
+              <div class="group-title">Fioke</div>
+
+              <div class="field">
+                <label for="selDrawerDepth">Dubina fioka (standard)</label>
+                <div class="control">
+                  <select id="selDrawerDepth">
+                    <option value="450">Plitke (450)</option>
+                    <option value="500" selected>Duboke (500)</option>
+                    <option value="550">Vrlo duboke (550)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="inpSlideAllowance">Toleranca šina</label>
+                <div class="control">
+                  <input id="inpSlideAllowance" type="number" placeholder="26">
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Viseći elementi -->
+            <div class="form-group">
+              <div class="group-title">Viseći elementi</div>
+
+              <div class="field">
+                <label for="inpHWall">Visina korpusa visećih</label>
+                <div class="control">
+                  <input id="inpHWall" type="number" value="720">
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="inpWallBottom">Donja ivica visećih</label>
+                <div class="control">
+                  <input id="inpWallBottom" type="number" value="1450">
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="inpWallDepth">Dubina visećih</label>
+                <div class="control">
+                  <input id="inpWallDepth" type="number" value="320">
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Info / validacija -->
+            <div class="form-group">
+              <div class="group-title">Informacije</div>
+
+              <div id="bottomTotNote" class="note-inline"></div>
+              <div id="globals" class="small" style="margin-top:8px"></div>
+              <div id="valid" class="mono" style="white-space:pre; background:#0a1220; border-radius:8px; padding:8px; margin-top:8px; min-height:60px"></div>
+              <div id="msg" class="small" style="color:#f59b9b; margin-top:6px"></div>
+            </div>
+          </div>
         </div>
-        <div id="bottomTotNote" class="note" style="margin-top:8px; opacity:.85;"></div>
-        <div id="globals" class="small" style="margin-top:8px"></div>
-        <div id="valid" class="mono" style="white-space:pre; background:#0a1220; border-radius:8px; padding:8px; margin-top:8px; min-height:60px"></div>
-        <div id="msg" class="small" style="color:#f59b9b"></div>
+        <!-- /kitchen-form -->
       </div>
 
       <!-- (skriveni) 2D preview koji očekuju skripte -->
