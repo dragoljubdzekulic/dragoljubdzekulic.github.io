@@ -8,6 +8,16 @@
   App.Models = App.Models || {};
 
   // ----- Pomoćni utili -----
+  function computeShelves(H, count = 2, topGap = 0, bottomGap = 0) {
+  const usable = Math.max(0, H - topGap - bottomGap);
+  const spacing = usable / (count + 1);
+  const shelves = [];
+  for (let i = 1; i <= count; i++) {
+    shelves.push(bottomGap + spacing * i);
+  }
+  return shelves;
+}
+
   const num = (v, d=0) => {
     const n = Number(v);
     return Number.isFinite(n) ? n : d;
