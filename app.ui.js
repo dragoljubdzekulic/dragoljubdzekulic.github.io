@@ -2,6 +2,7 @@
  * Bezbedan start (čeka App.Core), inicijalni JSON bootstrap,
  * dinamička etiketa visine, BOM/Budget/3D integracija + Budget table beautify,
  * + Save/Open .3xmeri projekata (zamena za Reset/Recompute dugmad).
+ * + Persist Prices & optional UI params (data-param) u .3xmeri
  */
 (function(){
   const log = (...a)=>console.log('[ui]', ...a);
@@ -60,11 +61,111 @@
     return { cfg, K, key };
   }
 
+  // ---------- Prices & Params helpers ----------
+  function collectPricesFromUI(){
+    // 1) pokušaj iz App.Budget ako postoji
+    try{
+      const p = window.App?.Budget?.getUnitPrices?.();
+      if (p && typeof p==='object') return { ...p };
+    }catch(_){}
+
+    // 2) fallback: iz poznatih input ID-jeva
+    const ids = ['pCarcassM2','pFrontM2','pHinge','pRail','pHandle','pScrew','pAbsLm','pTopLm','pLeg'];
+    const out = {};
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(el && el.value!=='') out[idToKey(id)] = numOrNull(el.value);
+    });
+
+    // 3) generički: svako polje sa data-price (po imenu ili id-u)
+    $$('#tab-summary [data-price], [data-price]').forEach(el=>{
+      const key = (el.name || el.id || '').trim();
+      if(!key) return;
+      const k = sanitizeKey(key);
+      const v = (el.type==='checkbox'||el.type==='radio') ? (el.checked?1:0) : numOrNull(el.value);
+      if (v!=null) out[k] = v;
+    });
+
+    return out;
+
+    function idToKey(id){ return sanitizeKey(id.replace(/^p/,'').replace(/^price_/,'').replace(/^unit_/,'').toLowerCase()); }
+    function sanitizeKey(k){ return String(k).replace(/[^\w]+/g,'_'); }
+    function numOrNull(v){
+      const n = Number(String(v).replace(',','.'));
+      return Number.isFinite(n) ? n : null;
+    }
+  }
+
+  function applyPricesToInputs(prices){
+    if(!prices || typeof prices!=='object') return;
+
+    // poznati ID-jevi
+    const set = (id,val)=>{ const el=document.getElementById(id); if(el!=null && val!=null) el.value=String(val); };
+    set('pCarcassM2', prices.carcassM2 ?? prices.carcassm2 ?? prices.carcass ?? prices.pb_m2);
+    set('pFrontM2',   prices.frontM2   ?? prices.frontm2   ?? prices.front);
+    set('pHinge',     prices.hinge);
+    set('pRail',      prices.rail);
+    set('pHandle',    prices.handle);
+    set('pScrew',     prices.screw);
+    set('pAbsLm',     prices.absLm ?? prices.abs_lm ?? prices.edge_lm);
+    set('pTopLm',     prices.topLm ?? prices.top_lm);
+    set('pLeg',       prices.leg);
+
+    // generički: probaj da mapiraš po name/id ključeve
+    $$('#tab-summary [data-price], [data-price]').forEach(el=>{
+      const key = (el.name || el.id || '').trim();
+      if(!key) return;
+      const k = key.replace(/[^\w]+/g,'_');
+      if (prices.hasOwnProperty(k)) {
+        if (el.type==='checkbox'||el.type==='radio') el.checked = !!prices[k];
+        else el.value = String(prices[k]);
+      }
+    });
+  }
+
+  function collectUIParams(){
+    // Bilo koji input/select/textarea sa data-param atributom
+    const params = {};
+    $$('[data-param]').forEach(el=>{
+      const key = el.getAttribute('data-param') || el.name || el.id;
+      if(!key) return;
+      let val;
+      if(el.type==='checkbox' || el.type==='radio') val = !!el.checked;
+      else val = el.value;
+      params[String(key).replace(/[^\w]+/g,'_')] = val;
+    });
+    return params;
+  }
+
+  function applyUIParams(params){
+    if(!params || typeof params!=='object') return;
+    $$('[data-param]').forEach(el=>{
+      const key = el.getAttribute('data-param') || el.name || el.id;
+      if(!key) return;
+      const k = String(key).replace(/[^\w]+/g,'_');
+      if(!params.hasOwnProperty(k)) return;
+      if(el.type==='checkbox' || el.type==='radio') el.checked = !!params[k];
+      else el.value = String(params[k]);
+    });
+  }
+
   // ---------- Save / Open .3xmeri ----------
   function onSaveClick(){
     try{
       if (typeof pushBuilderToJSON === 'function') pushBuilderToJSON();
       const cfg = getConfig();
+
+      // >>>> NOVO: upiši Prices + optional Params u fajl
+      try {
+        cfg.Prices = collectPricesFromUI();
+        const uiParams = collectUIParams();
+        if (uiParams && Object.keys(uiParams).length) cfg.Params = uiParams;
+        cfg.__meta = {
+          version: '3xmeri-1.0',
+          savedAt: new Date().toISOString()
+        };
+      } catch(_){}
+
       const nameBase = (cfg?.Kitchen?.ProjectName ? String(cfg.Kitchen.ProjectName) : '3xmeri_project');
       const name = nameBase.endsWith('.3xmeri') ? nameBase : (nameBase + '.3xmeri');
       const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
@@ -78,6 +179,7 @@
       const m = document.getElementById('msg'); if(m) m.textContent = 'Greška pri čuvanju: ' + e.message;
     }
   }
+
   function onOpenClick(){
     const inp = document.createElement('input');
     inp.type = 'file';
@@ -87,11 +189,23 @@
       try{
         const txt  = await f.text();
         const data = JSON.parse(txt);
+
         setConfig(data);
+
+        // >>>> NOVO: vrati Prices & Params u UI pre recompute
+        try {
+          applyPricesToInputs(data.Prices);
+          applyUIParams(data.Params);
+        } catch(_){}
+
         if (typeof syncGlobalsToInputs === 'function') syncGlobalsToInputs();
         if (typeof syncBuilderFromJSON === 'function') syncBuilderFromJSON();
         if (typeof renderBuilderList === 'function') renderBuilderList();
+
+        // recompute posle vraćanja inputa/cena
         if (typeof window.recompute === 'function') window.recompute();
+        if (window.App?.Budget?.recomputeBudget) window.App.Budget.recomputeBudget();
+
         const m = document.getElementById('msg'); if(m) m.textContent = 'Učitan fajl: ' + (f.name||'');
       }catch(e){
         const m = document.getElementById('msg'); if(m) m.textContent = 'Greška pri učitavanju: ' + e.message;
@@ -99,6 +213,7 @@
     });
     inp.click();
   }
+
   function initSaveOpenButtons(){
     // Preimenuj i rebounduj postojeća dugmad
     const bSave = document.getElementById('btnRun');   // bilo "Recompute"
@@ -451,6 +566,14 @@
     function initAfterCore(){
       if (window.App?.Core && typeof window.App.Core.solveItem === 'function'){
         log('App.Core ready, init full UI');
+
+        // >>>> NOVO: ako su cene/parametri već u startnom JSON-u – primeni ih
+        try {
+          const cfg = getConfig();
+          applyPricesToInputs(cfg.Prices);
+          applyUIParams(cfg.Params);
+        } catch(_){}
+
         syncBuilderFromJSON(); syncGlobalsToInputs(); renderBuilderList(); window.recompute();
       } else {
         setTimeout(initAfterCore, 200);
