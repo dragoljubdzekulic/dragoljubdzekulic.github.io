@@ -1,18 +1,85 @@
 /* app.offer.js – Offer/PDF generator (A4 print via Print Preview)
- * - U PDF ubacuje dve slike:
- *   1) 3D prikaz elemenata (snapshot iz #viewer3d canvas)
- *   2) Frontalni izgled kuhinje (forsira App.Fronts.renderIntoElements() pa uzima #elements kao SVG/PNG)
+ * Mobilni fix: SVG frontalni prikaz se konvertuje u PNG (async) pre ubacivanja u HTML
+ * - Varijanta C: 3D snapshot + frontalni prikaz
  * - CSP-friendly: nema blob:, nema inline <script>
- * - Print se trigeruje iz parent prozora nakon učitavanja novog taba
+ * - Otvaranje bez noopener/noreferrer (treba pristup prozoru radi print)
  */
 (function(){
   const NS  = (window.App = window.App || {});
   const log = (...a)=>console.log('[Offer]', ...a);
-// Pretvara SVG XML u data URI bez base64 (radi sa Unicode)
-function svgToDataUri(xml){
-  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
-}
-  
+
+  // === Helpers ===
+  function num(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
+  function money(v){ const n=Number(v); return Number.isFinite(n)?n.toLocaleString('sr-RS'):'0'; }
+  function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function svgToDataUri(xml){ return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml); }
+
+  // Konverzija SVG (DOM node) -> PNG dataURL preko offscreen canvasa (radi i na mobilnim)
+  function svgNodeToPngDataUrl(svgNode, maxWidthPx){
+    return new Promise((resolve) => {
+      try{
+        const s = svgNode.cloneNode(true);
+        if (!s.getAttribute('xmlns')) s.setAttribute('xmlns','http://www.w3.org/2000/svg');
+        if (!s.getAttribute('xmlns:xlink')) s.setAttribute('xmlns:xlink','http://www.w3.org/1999/xlink');
+
+        const xml = new XMLSerializer().serializeToString(s);
+        const svgUrl = svgToDataUri(xml);
+        const img = new Image();
+        img.onload = function(){
+          try{
+            const ratio = maxWidthPx ? Math.min(1, maxWidthPx / img.width) : 1;
+            const W = Math.max(1, Math.round(img.width * ratio));
+            const H = Math.max(1, Math.round(img.height * ratio));
+            const canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, W, H);
+            resolve(canvas.toDataURL('image/png'));
+          }catch(e){ console.warn('[Offer] svg->png draw fail', e); resolve(''); }
+        };
+        img.onerror = function(){ resolve(''); };
+        img.src = svgUrl;
+      }catch(e){
+        console.warn('[Offer] svg->png build fail', e);
+        resolve('');
+      }
+    });
+  }
+
+  async function getFrontImageDataUrl(){
+    // 1) Forsiraj crtanje u #elements (čak i kad tab nije otvoren)
+    try {
+      if (window.App?.Fronts?.renderIntoElements) {
+        await Promise.resolve(window.App.Fronts.renderIntoElements());
+      }
+    } catch(_){}
+
+    const host = document.getElementById('elements');
+    if (!host) return '';
+
+    // 2) Ako ima canvas – uzmi PNG odmah
+    const canvas = host.querySelector('canvas');
+    if (canvas && canvas.toDataURL) {
+      try { return canvas.toDataURL('image/png'); } catch(_) {}
+    }
+
+    // 3) Ako postoji SVG – konvertuj u PNG (mobilni-safe)
+    const svg = host.querySelector('svg');
+    if (svg) {
+      // max širina PNG-a (A4 sa marginama ~ 180mm ~ 680–800px pri 96dpi); uzmi nešto razumno
+      return await svgNodeToPngDataUrl(svg, 1200);
+    }
+
+    return '';
+  }
+
+  function get3DSnapshot(){
+    try{
+      const canvas = document.querySelector('#viewer3d canvas');
+      if (canvas && canvas.toDataURL) return canvas.toDataURL('image/png');
+    }catch(e){ console.warn('[Offer] 3D snapshot fail', e); }
+    return '';
+  }
 
   NS.Offer = {
     collect(){
@@ -42,45 +109,6 @@ function svgToDataUri(xml){
       };
     },
 
-    // === SNAPSHOTS ===
-    snapshot3D(){
-      try{
-        const canvas = document.querySelector('#viewer3d canvas');
-        if (canvas && canvas.toDataURL) return canvas.toDataURL('image/png');
-      }catch(e){ console.warn('[Offer] 3D snapshot fail', e); }
-      return '';
-    },
-
-    snapshotFront(){
-      try{
-        // Forsiraj da se SVG iscrta u #elements (i kad tab nije otvoren)
-        if (window.App?.Fronts?.renderIntoElements) {
-          try { window.App.Fronts.renderIntoElements(); } catch(_){}
-        }
-
-        const host = document.getElementById('elements');
-        if (!host) return '';
-
-        // Ako postoji canvas – uzmi PNG
-        const canvas = host.querySelector('canvas');
-        if (canvas && canvas.toDataURL) {
-          return canvas.toDataURL('image/png');
-        }
-
-        // Ako postoji SVG – base64 data URL
-        const svg = host.querySelector('svg');
-        if (svg) {
-          const s = svg.cloneNode(true);
-          if (!s.getAttribute('xmlns')) s.setAttribute('xmlns','http://www.w3.org/2000/svg');
-          const xml = new XMLSerializer().serializeToString(s);
-		  return svgToDataUri(xml); // bez btoa, Unicode-safe
-
-        }
-      }catch(e){ console.warn('[Offer] front snapshot fail', e); }
-      return '';
-    },
-
-    // === STIL I HTML ===
     styleTag(){
       return `
         <style>
@@ -97,19 +125,17 @@ function svgToDataUri(xml){
           th { background:#f3f5f8; text-align:left; }
           .ta-right { text-align:right; }
           .img-wrap { margin:12px 0; text-align:center; }
-          .img-wrap img { max-width:100%; border:1px solid #ccc; border-radius:8px; }
+          .img-wrap img { max-width:100%; height:auto; border:1px solid #ccc; border-radius:8px; }
           .caption { font-size:11px; color:#555; margin-top:4px; }
-		  .break-before{ break-before: page; page-break-before: always; }
+          @media print{
+            .break-before{ break-before: page; page-break-before: always; }
+          }
         </style>
       `;
     },
 
-    buildHTML(){
+    buildHTML({img3D, imgFront}){
       const { meta, bom, budget } = this.collect();
-
-      // Snapshot slike
-      const img3D    = this.snapshot3D();      // može biti ''
-      const imgFront = this.snapshotFront();   // može biti ''
 
       const bomRows = (bom||[]).map(r=>`
         <tr>
@@ -189,12 +215,19 @@ function svgToDataUri(xml){
 </body></html>`;
     },
 
-    // === EXPORT/PRINT ===
-    export(){
+    // === EXPORT/PRINT (ASYNC) ===
+    async export(){
       try{
-        const html = this.buildHTML();
+        // 1) Pripremi slike (async PNG za front – radi i na mobilnim)
+        const [img3D, imgFront] = await Promise.all([
+          Promise.resolve(get3DSnapshot()),
+          getFrontImageDataUrl()
+        ]);
 
-        // Otvori novi tab BEZ 'noopener'/'noreferrer' (treba pristup prozoru)
+        // 2) Sastavi HTML
+        const html = this.buildHTML({img3D, imgFront});
+
+        // 3) Otvori novi tab BEZ 'noopener'/'noreferrer'
         const w = window.open('about:blank', '_blank');
         if (!w) { alert('Popup je blokiran. Dozvolite iskačuće prozore za ovaj sajt.'); return; }
 
@@ -202,7 +235,7 @@ function svgToDataUri(xml){
         w.document.write(html);
         w.document.close();
 
-        // Auto-print iz parenta po učitavanju
+        // 4) Auto-print (kad se dokument učita)
         const start = Date.now();
         const tick = setInterval(() => {
           try{
@@ -212,8 +245,8 @@ function svgToDataUri(xml){
               clearInterval(tick);
               try { w.focus(); } catch(_){}
               try { w.print(); } catch(_){}
-            } else if (Date.now() - start > 5000) {
-              clearInterval(tick); // odustani posle 5s
+            } else if (Date.now() - start > 6000) {
+              clearInterval(tick);
             }
           }catch(_){ clearInterval(tick); }
         }, 150);
@@ -230,11 +263,6 @@ function svgToDataUri(xml){
       log('initialized');
     }
   };
-
-  // utils
-  function num(v){ const n=Number(v); return Number.isFinite(n)?n:0; }
-  function money(v){ const n=Number(v); return Number.isFinite(n)?n.toLocaleString('sr-RS'):'0'; }
-  function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
   document.addEventListener('DOMContentLoaded', ()=> NS.Offer.init());
 })();
