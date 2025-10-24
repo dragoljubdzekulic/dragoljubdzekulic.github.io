@@ -1,4 +1,4 @@
-/* app.fronts.tab.js — frontal tab with bottom height label */
+/* app.fronts.tab.js — frontal tab with bottom height label + mirror into #elements */
 (function(){
   var svgns = "http://www.w3.org/2000/svg";
   var ppm = 0.28;
@@ -141,8 +141,7 @@
     gGuides.appendChild(text(padX+4, wallY+14, "Donja ivica visecih", 11, "start", null));
     svg.appendChild(gGuides);
 
-    // === Gornja ivica visećih ===
-    // Konfigurisana visina ili maksimalna visina među visećim elementima ako konfiguracija ne postoji
+    // Gornja ivica visećih
     var wallHConfig = Number((K.Wall && K.Wall.H_carcass != null) ? K.Wall.H_carcass : NaN);
     var maxWallH = 0;
     (solved || []).forEach(function(s, i){
@@ -154,7 +153,7 @@
       }
     });
     var wallHForTop = Number.isFinite(wallHConfig) ? wallHConfig : (maxWallH || 720);
-    var wallTopY = wallY - wallHForTop * ppm; // y koordinata GORNJE ivice visećih
+    var wallTopY = wallY - wallHForTop * ppm;
 
     var xBase=0, xWall=0;
     (order||[]).forEach(function(it,i){
@@ -163,19 +162,14 @@
       var rowXmm = isWall ? xWall : xBase;
       var x0 = padX + rowXmm*ppm;
 
-      // Donji leže na podu; viseći donjom ivicom na isprekidanoj liniji
       var yBasePx = isWall ? wallY : floorY;
-
       var Wmm = Number(it.width||600);
       var Hc  = Number(sol.H_carcass||0);
 
-      // DETEKCIJA ASPIRATORA (ugradni/klasični/hood)
       var typeStr = ((it.type || '') + '').toLowerCase();
       var isHood  = typeStr.indexOf('aspirator') >= 0 || typeStr.indexOf('hood') >= 0;
 
       var g=document.createElementNS(svgns,'g');
-
-      // Ako je viseći i aspirator → poravnaj GORNJOM ivicom na wallTopY, inače standardno (top = bottom - H)
       var carcY = (isWall && isHood) ? wallTopY : (yBasePx - Hc*ppm);
 
       var carc  = rect(x0, carcY, Wmm*ppm, Hc*ppm, "rgba(255,255,255,0.03)", "#3a4356", 0.6);
@@ -229,7 +223,7 @@
     var xEnd = padX + totalBaseWidthMm * ppm;
     if (totalBaseWidthMm > 0) drawDimensionLine(svg, xStart, xEnd, yFloorDim, Math.round(totalBaseWidthMm)+" mm ukupna duzina");
 
-    // Floor -> countertop (compute and draw VERTICAL LINE WITHOUT LABEL)
+    // Floor -> countertop (vertikalna dimenzija + tekst ispod)
     var legMm = Number(K.H_plinth!=null ? K.H_plinth : DEFAULT_LEG);
     var topMm = Number(K.T_top!=null ? K.T_top : DEFAULT_TOP);
     var baseSolved = (solved||[]).map(function(s,ii){ return {s:s, it:(order||[])[ii]}; })
@@ -244,9 +238,9 @@
     if (totalToCounterMm > 0){
       var baseHeightPx = totalToCounterMm * ppm;
       var xVert = padX - 25; var y1 = floorY; var y2 = floorY - baseHeightPx;
-      drawVerticalDim(svg, xVert, y2, y1, ""); // no label here
+      drawVerticalDim(svg, xVert, y2, y1, ""); // bez labela na liniji
 
-      // Add centered bottom label BELOW the length dimension (auto-avoid left clipping)
+      // Centrirana donja etiketa, ispod horizontalne dužine
       var Hplinth = Number(K.H_plinth ?? 110);
       var Ttop    = Number(K.T_top ?? 38);
       var Hcar    = Math.max(0, Math.round(totalToCounterMm - Hplinth - Ttop));
@@ -266,28 +260,29 @@
       } catch(e){}
     }
 
-    // Wall cabinet height (for info/other uses)
-    var wallSolved = (solved||[]).map(function(s,ii){ return {s:s, it:(order||[])[ii]}; })
-      .filter(function(p){ return p && ((p.it.type||'')+'').indexOf('wall_')===0; });
-    var wallH = 0;
-    if (wallSolved.length){
-      for(var wi=0; wi<wallSolved.length; wi++){
-        var hc = Number(wallSolved[wi].s.H_carcass||0);
-        if(hc>wallH) wallH=hc;
-      }
-    } else {
-      wallH = Number((K.Wall||{}).H_carcass!=null ? (K.Wall||{}).H_carcass : 720);
-    }
+    // (info) maksimalna visina visećih — ostavljeno za dalje potrebe
+    // ...
 
     return svg;
   }
 
+  // === Render koji crta i u tab i u #elements (mirror) ===
   function render(cfg, order, solved){
-    var host = $('#frontsHost'); if(!host) return;
-    host.innerHTML='';
-    var svg = buildSVG(cfg, order, solved);
-    host.appendChild(svg);
-    var scale = $('#fronts-scale'); if(scale){ scale.textContent = "1 px ~ "+(1/ppm).toFixed(1)+" mm"; }
+    // 1) Tab prikaz
+    var host = $('#frontsHost'); 
+    if(host){
+      host.innerHTML='';
+      var svg1 = buildSVG(cfg, order, solved);
+      host.appendChild(svg1);
+      var scale = $('#fronts-scale'); if(scale){ scale.textContent = "1 px ~ "+(1/ppm).toFixed(1)+" mm"; }
+    }
+    // 2) Mirror u #elements (skriven) — uvek, radi PDF-a
+    var mirror = $('#elements');
+    if(mirror){
+      mirror.innerHTML = '';
+      var svg2 = buildSVG(cfg, order, solved);
+      mirror.appendChild(svg2);
+    }
   }
 
   function renderFromLast(){
@@ -326,6 +321,7 @@
     img.src = url;
   }
 
+  // === Tab i hook za recompute ===
   function ensureTabNow(){
     var tabs = $('.tabs[role="tablist"]');
     if(!tabs) return false;
@@ -421,6 +417,20 @@
       renderFromLast();
     }catch(e){ console.warn('fronts tab hook failed:', e); }
   }
+
+  // === Expose mini API za forsiranje crtanja u #elements (za Ponudu/PDF) ===
+  (window.App = window.App || {}).Fronts = {
+    renderIntoElements: function(){
+      var cfg = window.__lastCfg, order=window.__lastOrder, solved=window.__lastSolved;
+      if(!(cfg && order && solved)) return false;
+      var mirror = document.getElementById('elements');
+      if(!mirror) return false;
+      mirror.innerHTML = '';
+      mirror.appendChild(buildSVG(cfg, order, solved));
+      return true;
+    },
+    buildSVG: buildSVG
+  };
 
   window.addEventListener('DOMContentLoaded', waitForTabs);
 })();
