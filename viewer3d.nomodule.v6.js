@@ -1,5 +1,5 @@
 /* HSPLIT v1 */
-// viewer3d.nomodule.v6.js — bolji kontrast + outline ivice + veće/skalirajuće kote
+/* viewer3d.nomodule.v6.js — bolji kontrast + outline ivice + veće/skalirajuće kote + TOP/BOTTOM poravnanje visećih */
 (function(){
   const $ = id => document.getElementById(id);
   const setStatus = t => { const el=$("viewer3d-status"); if(el) el.textContent=t; };
@@ -162,6 +162,20 @@
     const wall = KC.Wall || {};
     const wallBottom = (wall.Bottom ?? 1450)*MM;
 
+    // === Gornja ivica visećih u 3D ===
+    // visina iz config-a ili max visina među visećim elementima (fallback)
+    const wallHConfig = Number.isFinite(+wall.H_carcass) ? +wall.H_carcass : NaN;
+    let maxWallH = 0;
+    (order||[]).forEach((it,i)=>{
+      const isWallIt = (it?.type||'').startsWith('wall_');
+      if (isWallIt){
+        const hcMm = ( (solved?.[i]?.H_carcass) ?? wall.H_carcass ?? 720 );
+        if (hcMm > maxWallH) maxWallH = hcMm;
+      }
+    });
+    const wallHForTopMM = Number.isFinite(wallHConfig) ? wallHConfig : (maxWallH || 720);
+    const wallTopY = wallBottom + wallHForTopMM*MM; // Y koordinata GORNJE ivice visećih
+
     (order||[]).forEach((it,i)=>{
       const sol=solved?.[i];
       const isWall = (it.type||'').startsWith('wall_');
@@ -173,17 +187,80 @@
       const Hc=( (sol?.H_carcass ?? (isWall ? (wall.H_carcass||720) : ((KC.H_total||900)-(KC.H_plinth||110)-(KC.T_top||38)))) )*MM;
 
       const x = isWall ? xWall : xBase;
-      const g=new THREE.Group(); g.position.set(x, isWall? wallBottom:0, 0); root.add(g);
 
-      // korpus
-      const carc=new THREE.Mesh(new THREE.BoxGeometry(W,Hc,D), matCar);
-      carc.position.set(W/2,Hc/2,D/2); g.add(carc); addOutline(carc, 0x88a6ff);
+      // meta poravnanje po elementu ili heuristika za aspirator
+      let metaAlign = (it.meta && it.meta.wallAlign) || it.wallAlign || null;
+      if (metaAlign) {
+        metaAlign = String(metaAlign).toLowerCase();
+        if (metaAlign !== 'top' && metaAlign !== 'bottom') metaAlign = null;
+      }
+      const typeStr = String(it.type||'').toLowerCase();
+      const isHood  = typeStr.includes('aspirator') || typeStr.includes('hood');
+      const wallAlign = metaAlign || (isHood ? 'top' : 'bottom');
+
+      // vertikalni položaj grupe:
+      // - donji elementi: 0 (na podu)
+      // - standardni viseći: wallBottom (donja ivica)
+      // - aspiratori ili meta.wallAlign='top': top = wallTopY, pa baza (dno) = top - Hc
+      const gy = isWall
+        ? (wallAlign === 'top' ? (wallTopY - Hc) : wallBottom)
+        : 0;
+
+      const g=new THREE.Group(); g.position.set(x, gy, 0); root.add(g);
+
+      const t = 0.018; // 18mm thickness
+      const netW = W - 2*t;
+      const isPrazan = (it.type === 'base_empty_carcass');
+
+      if (!isWall) {
+        // Za SVE donje elemente: prikazuj pojedinačne ploče
+
+        // BOK-L (leva stranica) - vertikalna ploča
+        const bokL = new THREE.Mesh(new THREE.BoxGeometry(t, Hc, D), matCar);
+        bokL.position.set(t/2, Hc/2, D/2);
+        g.add(bokL); addOutline(bokL, 0x88a6ff);
+
+        // BOK-R (desna stranica) - vertikalna ploča
+        const bokR = new THREE.Mesh(new THREE.BoxGeometry(t, Hc, D), matCar);
+        bokR.position.set(W - t/2, Hc/2, D/2);
+        g.add(bokR); addOutline(bokR, 0x88a6ff);
+
+        // DNO (dno) - horizontalna ploča na podu
+        const dno = new THREE.Mesh(new THREE.BoxGeometry(netW, t, D), matCar);
+        dno.position.set(W/2, t/2, D/2);
+        g.add(dno); addOutline(dno, 0x88a6ff);
+
+        // VEZNE LETVICE umesto punog TOP-a (za SVE donje elemente)
+        const connectorDepth = isPrazan ? ((it.topConnectorDepth || 80)*MM) : 0.08; // 80mm za sve
+        // VEZNA-PREDNJA (na prednjoj ivici, gore)
+        const connFront = new THREE.Mesh(new THREE.BoxGeometry(netW, t, connectorDepth), matCar);
+        connFront.position.set(W/2, Hc - t/2, connectorDepth/2);
+        g.add(connFront); addOutline(connFront, 0x88a6ff);
+        // VEZNA-ZADNJA (na zadnjoj ivici, gore)
+        const connBack = new THREE.Mesh(new THREE.BoxGeometry(netW, t, connectorDepth), matCar);
+        connBack.position.set(W/2, Hc - t/2, D - connectorDepth/2);
+        g.add(connBack); addOutline(connBack, 0x88a6ff);
+
+        // LEĐA (MDF 3mm) - samo za prazan korpus
+        if (isPrazan) {
+          const ledjaMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, metalness: 0.0, roughness: 0.95 });
+          const ledja = new THREE.Mesh(new THREE.BoxGeometry(netW, Hc, 0.003), ledjaMat);
+          ledja.position.set(W/2, Hc/2, 0.0015);
+          g.add(ledja); addOutline(ledja, 0x8a6a4a);
+        }
+      } else {
+        // Zidni elementi: prikazuj kao jednu kutiju (kao ranije)
+        const carc=new THREE.Mesh(new THREE.BoxGeometry(W,Hc,D), matCar);
+        carc.position.set(W/2,Hc/2,D/2); g.add(carc); addOutline(carc, 0x88a6ff);
+      }
 
       // frontovi (pozicioniranje odozgo nadole)
       let zBase=D+0.001; // front lica na z≈D (ispred korpusa)
       let acc=0;
-      
-      ((sol && sol.fronts && sol.fronts.length ? sol.fronts : [sol?.H_carcass||0]) ).forEach((fh,fi)=>{
+
+      // Renderuj frontove samo ako postoje (ne za prazan korpus)
+      const frontsToRender = (sol && sol.fronts && sol.fronts.length > 0) ? sol.fronts : [];
+      frontsToRender.forEach((fh,fi)=>{
         const fhm = fh*MM;
         const yCenter = (Hc - (acc + fhm/2));
 
@@ -202,7 +279,6 @@
         } else {
           addFront(W, W/2);
         }
-
 
         // === vizuelizacija fioka (unutrašnje kutije) ===
         const hasDrawers = (it.type==='drawer_3' || it.type==='combo_drawer_door' || it.type==='oven_housing');
@@ -225,20 +301,20 @@
         }
 
         acc += fhm;
-        if (fi < (sol.fronts.length-1)) acc += gap; // dodaj razmak između frontova
+        if (fi < (frontsToRender.length-1)) acc += gap; // dodaj razmak između frontova
       });
 
-      // radna ploča (po segmentu, nad donjim elementima)
-      if(!isWall && topT>0){
+      // radna ploča (po segmentu, nad donjim elementima) - ne za prazan korpus
+      if(!isWall && !isPrazan && topT>0){
         const top=new THREE.Mesh(new THREE.BoxGeometry(W, topT, topD), matTop);
         top.position.set(W/2, Hc + topT/2, topD/2);
         g.add(top); addOutline(top, 0xE0E0E0);
       }
 
-      // kote
-      const baseY = isWall? wallBottom:0;
-      dimsGroup.add(dimX(x,baseY, D+0.03, W, `${Math.round(W/MM)}mm`));
-      dimsGroup.add(dimY(x-0.03,baseY,0,  Hc, `${Math.round(Hc/MM)}mm`));
+      // kote – vezane za realnu bazu (gy) tog elementa
+      const baseY = gy;
+      dimsGroup.add(dimX(x, baseY, D+0.03, W, `${Math.round(W/MM)}mm`));
+      dimsGroup.add(dimY(x-0.03, baseY, 0,  Hc, `${Math.round(Hc/MM)}mm`));
 
       if(isWall) xWall += W+0.03; else xBase += W+0.03; built++;
     });

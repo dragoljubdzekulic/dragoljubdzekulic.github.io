@@ -5,13 +5,12 @@
  */
 (function(){
   function makeBtn(type, title){
-    const b = document.createElement('button');
-    b.dataset.type = type;
-    b.textContent = '+ ' + (title || type);
-    b.style.marginRight = '6px';
-    b.style.marginBottom = '6px';
-    return b;
-  }
+  const b = document.createElement('button');
+  b.dataset.type = type;
+  b.textContent = (title || type);
+  b.className = 'catalog-item';
+  return b;
+}
   function alreadyHasButtons(cat){
     // crude check by counting children with data-type; if > 0, we can still append our section
     return Array.from(cat.querySelectorAll('button[data-type]')).map(b=>b.dataset.type);
@@ -31,7 +30,7 @@
     const have = new Set(alreadyHasButtons(cat));
     const reg = App.Models.registry;
     const frag = document.createDocumentFragment();
-    insertHeader(frag, 'Novi modeli (registry)');
+    insertHeader(frag, 'Suggested for you');
     Object.keys(reg).forEach(type=>{
       if(!App.Core.TEMPLATES[type]) return; // no factory, skip
       const title = (reg[type] && reg[type].title) || type;

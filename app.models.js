@@ -214,6 +214,27 @@
         const H = mm(it?.H ?? this.defaults.H);
         return { H_carcass: H, fronts: [H], gaps: [], notes: [], width: parseWidth(it) };
       }
+    },
+
+    // 13) Prazan korpus element (bez frontova)
+    "base_empty_carcass": {
+      title: "Prazan korpus element",
+      defaults: { width: 600, depth: 560, topConnectorDepth: 80 },
+      solve(k, it) {
+        const H = getHCarcass(k, it);
+        const notes = [];
+        // Prazan korpus - nema frontova
+        return {
+          H_carcass: H,
+          fronts: [],
+          gaps: [],
+          notes,
+          width: parseWidth(it),
+          hasBackPanel: true,        // MDF 3mm leđa
+          hasTopConnectors: true,    // 2 vezne ploče dubine 80mm (prednja i zadnja)
+          topConnectorDepth: mm(it?.topConnectorDepth ?? this.defaults.topConnectorDepth)
+        };
+      }
     }
   };
 
@@ -224,6 +245,7 @@
     { type: "base_dishwasher_half" },
     { type: "base_oven_housing" },
     { type: "base_small_fridge" },
+    { type: "base_empty_carcass" },
     { type: "wall_single", opts: [{H:360},{H:720}] },
     { type: "wall_double", opts: [{H:720}] },
     { type: "wall_open_shelf", opts: [{H:360},{H:720}] },

@@ -25,6 +25,7 @@ App.Budget.countByType = function(order){
     else if(t==='base_1door'||t==='sink_1door'||t==='wall_1door'){ doors+=1; handles+=1; }
     else if(t==='dishwasher_60'){ handles+=1; }
     else if(t==='oven_housing'){ drawers+=1; handles+=1; }
+    else if(t==='base_empty_carcass'){ /* nema vrata ni ručica */ }
   });
   return {doors, drawers, handles, baseBoxes, wallBoxes};
 };

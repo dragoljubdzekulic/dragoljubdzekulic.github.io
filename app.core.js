@@ -29,12 +29,14 @@ App.Core.solveItem = function(k,it){
 
     case 'wall_open':{ break; }
     case 'wall_open_shelf':{ break; }
+    case 'base_empty_carcass':{ break; } // Prazan korpus - nema frontove
     default: res.notes.push('Nepoznat tip: '+it.type);
   }
   const sumF = res.fronts.reduce((a,b)=>a+b,0);
   const sumG = res.gaps.reduce((a,b)=>a+b,0);
   const diff = H - (sumF + sumG);
-  if(Math.abs(diff)>0.5) res.notes.push(`Neusaglašeno: diff=${diff.toFixed(1)}mm`);
+  // Validacija samo ako element ima frontove
+  if(res.fronts.length > 0 && Math.abs(diff)>0.5) res.notes.push(`Neusaglašeno: diff=${diff.toFixed(1)}mm`);
   return res;
 };
 
@@ -57,6 +59,7 @@ App.Core.TEMPLATES = {
   sink_1door: ()=>({ id: nextId(), type: 'sink_1door', width:600, depth:560 }),
   dishwasher_60: ()=>({ id: nextId(), type: 'dishwasher_60', width:600, depth:560, appliance:{ nicheMin:815 } }),
   oven_housing: ()=>({ id: nextId(), type: 'oven_housing', width:600, depth:560, appliance:{ ovenNiche:595 } }),
+  base_empty_carcass: ()=>({ id: nextId(), type: 'base_empty_carcass', width:600, depth:560, topConnectorDepth:80 }),
   wall_1door: ()=>({ id: nextId(), type: 'wall_1door', width:600, depth:320 }),
   wall_open:  ()=>({ id: nextId(), type: 'wall_open',  width:600, depth:320 }),
   wall_open_shelf: ()=>({ id: nextId(), type: 'wall_open_shelf', width:600, depth:320, shelves:2 })
