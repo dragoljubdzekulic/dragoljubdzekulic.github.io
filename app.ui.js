@@ -1,13 +1,17 @@
-/* app.ui.js – v2.6
+/* app.ui.js – v2.8
  * Bezbedan start (čeka App.Core), inicijalni JSON bootstrap,
- * dinamička etiketa visine, BOM/Budget/3D integracija + Budget table beautify,
- * + Save/Open .3xmeri projekata (zamena za Reset/Recompute dugmad).
- * + Persist Prices & optional UI params (data-param) u .3xmeri
+ * centralni state (App.State) – 1x parse,
+ * debounce za recompute i cene, BOM/Budget/3D integracija + Budget table beautify (guard),
+ * Save/Open .3xmeri projekata + persist Prices & UI Params.
+ * NOVO: bezbedan reset 3D viewera kada se elementi uklone + ručni "Reset 3D".
  */
 (function(){
   const log = (...a)=>console.log('[ui]', ...a);
   const $  = (s,root=document)=>root.querySelector(s);
   const $$ = (s,root=document)=>Array.from(root.querySelectorAll(s));
+
+  // ---------- Debounce helper ----------
+  const debounce = (fn,ms=140)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
 
   // ---------- Bootstrap JSON ako je prazan ----------
   function bootstrapIfEmpty(){
@@ -30,54 +34,42 @@
       }
     };
     ta.value = JSON.stringify(initial, null, 2);
+    try{ App.State && App.State.set(initial); }catch(_){}
   }
 
-  // ---------- JSON helpers ----------
+  // ---------- JSON helpers (preko App.State) ----------
   function getConfig(){
-    const ta = $('#jsonInput');
-    if(!ta) return { Kitchen:{} };
-    try{
-      const cfg = JSON.parse(ta.value || '{}');
-      return (cfg && typeof cfg==='object') ? cfg : { Kitchen:{} };
-    }catch(e){
-      console.warn('JSON parse failed, using empty config', e);
-      return { Kitchen:{} };
-    }
+    try{ return (App.State && App.State.get()) || {}; } catch(_){ return {}; }
   }
   function setConfig(cfg){
-    const ta = $('#jsonInput');
-    if(!ta) return;
-    try{ ta.value = JSON.stringify(cfg, null, 2); }
-    catch(e){ ta.value = '{}'; }
+    try{ App.State && App.State.set(cfg||{}); } catch(_){}
   }
   function ensureKitchenShape(cfg){
-    const key = (cfg.Kitchen?'Kitchen':(cfg.kitchen?'kitchen':'Kitchen'));
-    cfg[key] = cfg[key] || {};
-    const K = cfg[key];
+    const C = cfg || getConfig();
+    const key = (C.Kitchen?'Kitchen':(C.kitchen?'kitchen':'Kitchen'));
+    C[key] = C[key] || {};
+    const K = C[key];
     K.Defaults = K.Defaults || {};
     K.Drawer   = K.Drawer   || {};
     K.Wall     = K.Wall     || {};
     K.Wall.Defaults = K.Wall.Defaults || {};
-    return { cfg, K, key };
+    setConfig(C);
+    return { cfg:C, K, key };
   }
 
   // ---------- Prices & Params helpers ----------
   function collectPricesFromUI(){
-    // 1) pokušaj iz App.Budget ako postoji
     try{
       const p = window.App?.Budget?.getUnitPrices?.();
       if (p && typeof p==='object') return { ...p };
     }catch(_){}
 
-    // 2) fallback: iz poznatih input ID-jeva
     const ids = ['pCarcassM2','pFrontM2','pHinge','pRail','pHandle','pScrew','pAbsLm','pTopLm','pLeg'];
     const out = {};
     ids.forEach(id=>{
       const el = document.getElementById(id);
       if(el && el.value!=='') out[idToKey(id)] = numOrNull(el.value);
     });
-
-    // 3) generički: svako polje sa data-price (po imenu ili id-u)
     $$('#tab-summary [data-price], [data-price]').forEach(el=>{
       const key = (el.name || el.id || '').trim();
       if(!key) return;
@@ -85,21 +77,15 @@
       const v = (el.type==='checkbox'||el.type==='radio') ? (el.checked?1:0) : numOrNull(el.value);
       if (v!=null) out[k] = v;
     });
-
     return out;
 
     function idToKey(id){ return sanitizeKey(id.replace(/^p/,'').replace(/^price_/,'').replace(/^unit_/,'').toLowerCase()); }
     function sanitizeKey(k){ return String(k).replace(/[^\w]+/g,'_'); }
-    function numOrNull(v){
-      const n = Number(String(v).replace(',','.'));
-      return Number.isFinite(n) ? n : null;
-    }
+    function numOrNull(v){ const n = Number(String(v).replace(',','.')); return Number.isFinite(n) ? n : null; }
   }
 
   function applyPricesToInputs(prices){
     if(!prices || typeof prices!=='object') return;
-
-    // poznati ID-jevi
     const set = (id,val)=>{ const el=document.getElementById(id); if(el!=null && val!=null) el.value=String(val); };
     set('pCarcassM2', prices.carcassM2 ?? prices.carcassm2 ?? prices.carcass ?? prices.pb_m2);
     set('pFrontM2',   prices.frontM2   ?? prices.frontm2   ?? prices.front);
@@ -111,7 +97,6 @@
     set('pTopLm',     prices.topLm ?? prices.top_lm);
     set('pLeg',       prices.leg);
 
-    // generički: probaj da mapiraš po name/id ključeve
     $$('#tab-summary [data-price], [data-price]').forEach(el=>{
       const key = (el.name || el.id || '').trim();
       if(!key) return;
@@ -124,7 +109,6 @@
   }
 
   function collectUIParams(){
-    // Bilo koji input/select/textarea sa data-param atributom
     const params = {};
     $$('[data-param]').forEach(el=>{
       const key = el.getAttribute('data-param') || el.name || el.id;
@@ -136,7 +120,6 @@
     });
     return params;
   }
-
   function applyUIParams(params){
     if(!params || typeof params!=='object') return;
     $$('[data-param]').forEach(el=>{
@@ -155,15 +138,11 @@
       if (typeof pushBuilderToJSON === 'function') pushBuilderToJSON();
       const cfg = getConfig();
 
-      // >>>> NOVO: upiši Prices + optional Params u fajl
       try {
         cfg.Prices = collectPricesFromUI();
         const uiParams = collectUIParams();
         if (uiParams && Object.keys(uiParams).length) cfg.Params = uiParams;
-        cfg.__meta = {
-          version: '3xmeri-1.0',
-          savedAt: new Date().toISOString()
-        };
+        cfg.__meta = { version: '3xmeri-1.0', savedAt: new Date().toISOString() };
       } catch(_){}
 
       const nameBase = (cfg?.Kitchen?.ProjectName ? String(cfg.Kitchen.ProjectName) : '3xmeri_project');
@@ -192,7 +171,6 @@
 
         setConfig(data);
 
-        // >>>> NOVO: vrati Prices & Params u UI pre recompute
         try {
           applyPricesToInputs(data.Prices);
           applyUIParams(data.Params);
@@ -202,8 +180,7 @@
         if (typeof syncBuilderFromJSON === 'function') syncBuilderFromJSON();
         if (typeof renderBuilderList === 'function') renderBuilderList();
 
-        // recompute posle vraćanja inputa/cena
-        if (typeof window.recompute === 'function') window.recompute();
+        softRecompute();
         if (window.App?.Budget?.recomputeBudget) window.App.Budget.recomputeBudget();
 
         const m = document.getElementById('msg'); if(m) m.textContent = 'Učitan fajl: ' + (f.name||'');
@@ -215,27 +192,17 @@
   }
 
   function initSaveOpenButtons(){
-    // Preimenuj i rebounduj postojeća dugmad
-    const bSave = document.getElementById('btnRun');   // bilo "Recompute"
-    const bOpen = document.getElementById('btnReset'); // bilo "Reset"
-    if (bSave){
-      bSave.textContent = 'Save';
-      bSave.title = 'Sačuvaj .3xmeri projekat';
-      bSave.onclick = onSaveClick;
-    }
-    if (bOpen){
-      bOpen.textContent = 'Open';
-      bOpen.title = 'Otvori .3xmeri projekat';
-      bOpen.onclick = onOpenClick;
-    }
+    const bSave = document.getElementById('btnRun');
+    const bOpen = document.getElementById('btnReset');
+    if (bSave){ bSave.textContent = 'Save'; bSave.title = 'Sačuvaj .3xmeri projekat'; bSave.onclick = onSaveClick; }
+    if (bOpen){ bOpen.textContent = 'Open'; bOpen.title = 'Otvori .3xmeri projekat'; bOpen.onclick = onOpenClick; }
   }
 
   // ---------- Dinamička etiketa visine ----------
   function updateBottomTotLabel(){
     const host = document.getElementById('bottomTotNote');
     if(!host) return;
-    let cfg={}; try{ cfg = JSON.parse(document.getElementById('jsonInput')?.value||'{}'); }catch(_){ }
-    const K = (cfg.Kitchen||cfg.kitchen||{});
+    let K={}; try{ K = (getConfig().Kitchen||getConfig().kitchen||{}); }catch(_){ }
     const Hplinth = Number(K.H_plinth ?? 110);
     const Ttop    = Number(K.T_top    ?? 38);
     let Hcar = 0;
@@ -251,14 +218,37 @@
     try{
       const cfg = getConfig();
       const K = (cfg.Kitchen||cfg.kitchen||{});
-      if (Array.isArray(K.Builder)){
-        window.builder = K.Builder.map((it,i)=>({
+
+      // Fallback: ako nema Kitchen.Builder, uzmi cfg.Order
+      const src = Array.isArray(K.Builder) ? K.Builder
+                : Array.isArray(cfg.Order) ? cfg.Order
+                : [];
+
+      if (src.length){
+        window.builder = src.map((it,i)=>({
           id: it.id || (App.Core?.nextId ? App.Core.nextId() : ('E'+(i+1))),
-          type: it.type, width: Number(it.width||600), depth: Number(it.depth||560), ...it
+          type: it.type,
+          width: Number(it.width||600),
+          depth: Number(
+            it.depth ??
+            (String(it.type||'').startsWith('wall_')
+              ? (K.Wall?.Defaults?.CarcassDepth ?? 320)
+              : (K.Defaults?.CarcassDepth ?? 560))
+          ),
+          ...it
         }));
+
+        // Ako je došlo iz Order-a, prespi u Kitchen.Builder i ukloni stari Order
+        if (!Array.isArray(K.Builder) && src === cfg.Order) {
+          const { K: KK } = ensureKitchenShape(cfg);
+          KK.Builder = window.builder.map(x=>({ ...x }));
+          delete cfg.Order;
+          setConfig(cfg);
+        }
       }
     }catch(e){ console.warn('syncBuilderFromJSON failed', e); }
   }
+
   function pushBuilderToJSON(){
     try{
       const cfg = getConfig();
@@ -321,7 +311,7 @@
       if (Number.isFinite(Dwall)) K.Wall.Defaults.CarcassDepth = Dwall;
 
       setConfig(data);
-      window.recompute();
+      softRecompute();
     }catch(e){
       const m = document.getElementById('msg'); if(m) m.textContent = 'Greška (globals): '+e.message;
     }
@@ -343,36 +333,68 @@
     window.builder.push(item);
     pushBuilderToJSON();
     renderBuilderList();
-    window.recompute();
+    softRecompute();
   }
 
-  // ---------- Budget table beautify ----------
+  // ---------- Budget table beautify (guard) ----------
+  let _beautifyInProgress = false;
   function enhanceBudgetTable(){
-    const host = document.getElementById('budget');
-    if(!host) return;
-    const tbl = host.querySelector('table');
-    if(!tbl) return;
+    if(_beautifyInProgress) return;
+    _beautifyInProgress = true;
+    try{
+      const host = document.getElementById('budget');
+      if(!host) return;
+      const tbl = host.querySelector('table');
+      if(!tbl) return;
 
-    // dodaj vizuelnu klasu (CSS skin u index.html)
-    tbl.classList.add('budget-table');
+      tbl.classList.add('budget-table');
 
-    // poravnaj numeričke kolone, označi total-redove
-    const rows = Array.from(tbl.querySelectorAll('thead tr, tbody tr, tfoot tr'));
-    rows.forEach(tr=>{
-      const cells = Array.from(tr.children);
-      cells.forEach((td, i)=>{
-        const raw = td.textContent.trim();
-        const test = raw.replace(/\s+/g,'');
-        // heuristika: od 3. kolone desno ili “ličim na broj” => num
-        if (i >= 2 || /^[\d\.\,\-]+(?:RSD)?$/i.test(test)) td.classList.add('num');
-        if (/RSD$/i.test(test)) td.classList.add('muted');
+      const rows = Array.from(tbl.querySelectorAll('thead tr, tbody tr, tfoot tr'));
+      rows.forEach(tr=>{
+        const cells = Array.from(tr.children);
+        cells.forEach((td, i)=>{
+          const raw = td.textContent.trim();
+          const test = raw.replace(/\s+/g,'');
+          if (i >= 2 || /^[\d\.\,\-]+(?:RSD)?$/i.test(test)) td.classList.add('num');
+          if (/RSD$/i.test(test)) td.classList.add('muted');
+        });
+        const first = (cells[0]?.textContent||'').toLowerCase();
+        if (first.includes('ukupno') || first.includes('total')) tr.classList.add('total-row');
       });
-      const first = (cells[0]?.textContent||'').toLowerCase();
-      if (first.includes('ukupno') || first.includes('total')) tr.classList.add('total-row');
-    });
+    } finally {
+      _beautifyInProgress = false;
+    }
   }
 
-  // ---------- Builder list (BEAUTIFY) ----------
+  // ---------- Viewer3D reset helper ----------
+  let __lastRenderIds = new Set();
+  function resetViewerIfNeeded(order){
+    try{
+      const nowIds = new Set((order||[]).map(it=>it.id));
+      let needReset = false;
+      __lastRenderIds.forEach(id => { if(!nowIds.has(id)) needReset = true; });
+
+      if (needReset && window.Viewer3D){
+        if (typeof Viewer3D.clear === 'function') {
+          Viewer3D.clear();
+        } else if (typeof Viewer3D.reset === 'function') {
+          Viewer3D.reset();
+        } else {
+          const host = document.getElementById('viewer3d');
+          if (host && host.parentNode){
+            const repl = host.cloneNode(false);
+            host.parentNode.replaceChild(repl, host);
+            if (typeof Viewer3D.init === 'function') Viewer3D.init(repl);
+          }
+        }
+      }
+      __lastRenderIds = nowIds;
+    }catch(e){
+      console.warn('[UI] resetViewerIfNeeded fail', e);
+    }
+  }
+
+  // ---------- Builder list ----------
   function renderBuilderList(){
     const host = $('#builderList');
     if(!host) return;
@@ -397,13 +419,11 @@
       const row = document.createElement('div');
       row.className = 'builder-row';
 
-      // kolona 1: ID
       const colId = document.createElement('div');
       colId.className = 'builder-id';
       colId.textContent = (it.id || ('E'+(idx+1)));
       row.appendChild(colId);
 
-      // kolona 2: TYPE chip
       const colType = document.createElement('div');
       colType.className = 'builder-type';
       const chip = document.createElement('span');
@@ -412,7 +432,6 @@
       colType.appendChild(chip);
       row.appendChild(colType);
 
-      // kolona 3: širina
       const colW = document.createElement('div');
       colW.className = 'field';
       const inpW = document.createElement('input');
@@ -420,13 +439,12 @@
       inpW.value = Number(it.width||600);
       inpW.addEventListener('change', ()=>{
         it.width = Number(inpW.value)||it.width;
-        pushBuilderToJSON(); window.recompute(); updateLenInfo();
+        pushBuilderToJSON(); softRecompute(); updateLenInfo();
       });
       const unitW = document.createElement('span'); unitW.className='unit'; unitW.textContent='mm';
       colW.append(inpW, unitW);
       row.appendChild(colW);
 
-      // kolona 4: dubina
       const colD = document.createElement('div');
       colD.className = 'field';
       const inpD = document.createElement('input');
@@ -434,41 +452,36 @@
       inpD.value = Number(it.depth || ((String(it.type).startsWith('wall_'))?320:560));
       inpD.addEventListener('change', ()=>{
         it.depth = Number(inpD.value)||it.depth;
-        pushBuilderToJSON(); window.recompute();
+        pushBuilderToJSON(); softRecompute();
       });
       const unitD = document.createElement('span'); unitD.className='unit'; unitD.textContent='mm';
       colD.append(inpD, unitD);
       row.appendChild(colD);
 
-      // kolona 5: akcije (dup / up / down / del)
       const colA = document.createElement('div');
       colA.className = 'builder-actions';
 
-      // DUPLICATE
       colA.appendChild(makeBtn('i-dup', 'Dupliraj', ()=>{
-        const copy = { ...it, id: undefined }; // novi ID će dodeliti nextId/auto
+        const copy = { ...it, id: undefined };
         list.splice(idx+1, 0, copy);
-        pushBuilderToJSON(); renderBuilderList(); window.recompute();
+        pushBuilderToJSON(); renderBuilderList(); softRecompute();
       }));
 
-      // MOVE UP
       colA.appendChild(makeBtn('i-up', 'Pomeri gore', ()=>{
         if (idx<=0) return;
         const tmp = list[idx-1]; list[idx-1] = list[idx]; list[idx] = tmp;
-        pushBuilderToJSON(); renderBuilderList(); window.recompute();
+        pushBuilderToJSON(); renderBuilderList(); softRecompute();
       }));
 
-      // MOVE DOWN
       colA.appendChild(makeBtn('i-down', 'Pomeri dole', ()=>{
         if (idx>=list.length-1) return;
         const tmp = list[idx+1]; list[idx+1] = list[idx]; list[idx] = tmp;
-        pushBuilderToJSON(); renderBuilderList(); window.recompute();
+        pushBuilderToJSON(); renderBuilderList(); softRecompute();
       }));
 
-      // DELETE
       colA.appendChild(makeBtn('i-del', 'Ukloni', ()=>{
         list.splice(idx,1);
-        pushBuilderToJSON(); renderBuilderList(); window.recompute();
+        pushBuilderToJSON(); renderBuilderList(); softRecompute();
       }));
 
       row.appendChild(colA);
@@ -488,7 +501,7 @@
   }
 
   // ---------- BOM / Budget / 3D ----------
-  window.recompute = function(){
+  function hardRecompute(){
     const cfg = getConfig(); ensureKitchenShape(cfg);
     const K = (cfg.Kitchen||cfg.kitchen||{});
     const order = (window.builder || []);
@@ -497,83 +510,110 @@
       for(const it of order){ try{ solved.push(App.Core.solveItem(K, it)); }catch(e){ console.warn('solve fail', e); } }
     }
     window.__lastCfg = cfg; window.__lastOrder = order; window.__lastSolved = solved;
-    try{ if (window.Viewer3D?.render) window.Viewer3D.render(order, cfg, solved); }catch(e){}
+
+    try{
+      // >>> reset viewera ako su neki prethodni elementi uklonjeni
+      resetViewerIfNeeded(order);
+      if (window.Viewer3D?.render) window.Viewer3D.render(order, cfg, solved);
+    }catch(e){}
+
     try {
-      let rows = []; 
+      let rows = [];
       if(App?.BOM?.bomForItem) {
-        order.forEach((it,i) => { 
-          rows = rows.concat(App.BOM.bomForItem(cfg,it,solved[i])||[]); 
+        order.forEach((it,i) => {
+          rows = rows.concat(App.BOM.bomForItem(cfg,it,solved[i])||[]);
         });
         const aggregatedRows = App.BOM.aggregateBOM(rows);
         App.BOM.renderBOM(aggregatedRows);
         window.__lastAggBOM = aggregatedRows;
         if (App?.Budget?.recomputeBudget) App.Budget.recomputeBudget();
-        enhanceBudgetTable(); // <— beautify nakon rendera
+        enhanceBudgetTable();
       }
       window.__lastRows = rows;
-    } catch(e) { 
-      console.warn('BOM/Budget', e); 
+    } catch(e) {
+      console.warn('BOM/Budget', e);
     }
     updateBottomTotLabel();
     return {cfg, order, solved};
-  };
+  }
+  const softRecompute = debounce(() => {
+  if (typeof window.recompute === 'function') return window.recompute();
+  return hardRecompute(); // fallback ako viewer još nije „uhvatio” hook
+}, 140);
+
+  window.recompute = hardRecompute;
 
   // ---------- Start ----------
   window.addEventListener('DOMContentLoaded', ()=>{
-    log('UI start v2.6');
+    log('UI start v2.8');
     bootstrapIfEmpty();
-    initSaveOpenButtons(); // <— aktiviraj Save/Open na postojećim dugmadima
+    initSaveOpenButtons();
 
     const cat = $('#catalog'); if(cat) cat.addEventListener('click', onCatalogClick);
 
-    // global input handlers
     ['inpHCarcass','inpDepth','inpTopThickness','selDrawerDepth','inpSlideAllowance',
      'inpTotalLength','inpHWall','inpWallBottom','inpWallDepth']
      .forEach(id=>{ const e=document.getElementById(id); if(e){ e.addEventListener('input', onGlobalInputsChange); e.addEventListener('change', onGlobalInputsChange); } });
 
     const ta = $('#jsonInput');
-    if(ta){ ta.addEventListener('input', ()=>{ syncGlobalsToInputs(); syncBuilderFromJSON(); renderBuilderList(); }); }
+    if(ta){
+      ta.addEventListener('input', ()=>{
+        try{ App.State && App.State.loadFromTextarea && App.State.loadFromTextarea(); }catch(_){}
+        syncGlobalsToInputs(); syncBuilderFromJSON(); renderBuilderList();
+      });
+    }
 
-    // Auto-recompute budžeta na promenu cene (IDs + data-price fallback)
     const priceIds = ['pCarcassM2','pFrontM2','pHinge','pRail','pHandle','pScrew','pAbsLm','pTopLm','pLeg'];
     const priceInputs = new Set();
     priceIds.forEach(id => { const el = document.getElementById(id); if (el) priceInputs.add(el); });
     $$('#tab-summary [data-price], [data-price]').forEach(el => priceInputs.add(el));
 
-    const onPriceChange = ()=>{
+    const onPriceChange = debounce(()=>{
       try{
         if (window.App?.Budget?.recomputeBudget) App.Budget.recomputeBudget();
-        enhanceBudgetTable(); // <— beautify posle svakog proračuna
+        enhanceBudgetTable();
       }catch(e){ console.warn('Budget recompute fail', e); }
-    };
+    }, 160);
     priceInputs.forEach(el=>{
       el.addEventListener('input', onPriceChange);
       el.addEventListener('change', onPriceChange);
     });
 
-    // Kada se otvori tab Rezime, osveži budžet
     const btnSummary = document.getElementById('tabbtn-summary');
     if (btnSummary) btnSummary.addEventListener('click', onPriceChange);
 
-    // MutationObserver: ulovi svaki redraw budžeta (ako ga App.Budget menja dinamički)
     const budgetHost = document.getElementById('budget');
     if (budgetHost && 'MutationObserver' in window){
       const mo = new MutationObserver(()=> enhanceBudgetTable());
       mo.observe(budgetHost, { childList:true, subtree:true });
     }
 
-    // Bezbedno čekanje dok se App.Core ne učita
+    // Ručni "Reset 3D" na postojeće dugme #btnShot
+    const btnShot = document.getElementById('btnShot');
+    if (btnShot){
+      btnShot.title = 'Reset 3D';
+      btnShot.textContent = 'Reset 3D';
+      btnShot.onclick = ()=>{
+        try{
+          __lastRenderIds = new Set();               // zaboravi stare
+          resetViewerIfNeeded([]);                   // natera clear/reset
+          const cfg = getConfig();
+          const order = (window.builder||[]);
+          if (typeof Viewer3D?.render === 'function'){
+            Viewer3D.render(order, cfg, window.__lastSolved||[]);
+          }
+        }catch(e){ console.warn('manual 3D reset fail', e); }
+      };
+    }
+
     function initAfterCore(){
       if (window.App?.Core && typeof window.App.Core.solveItem === 'function'){
         log('App.Core ready, init full UI');
-
-        // >>>> NOVO: ako su cene/parametri već u startnom JSON-u – primeni ih
         try {
           const cfg = getConfig();
           applyPricesToInputs(cfg.Prices);
           applyUIParams(cfg.Params);
         } catch(_){}
-
         syncBuilderFromJSON(); syncGlobalsToInputs(); renderBuilderList(); window.recompute();
       } else {
         setTimeout(initAfterCore, 200);

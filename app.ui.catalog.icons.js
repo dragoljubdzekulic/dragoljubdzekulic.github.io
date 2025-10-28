@@ -1,7 +1,6 @@
 /* app.ui.catalog.icons.js
- * Ikonice za SVE elemente (core + models registry).
- * Dodaje ikonice u #catalog button[data-type] i radi i za dinamički dodate dugmiće (MutationObserver).
- * Stil: isti vizuelni jezik kao postojeće ikone (svetlosivo telo, tamni outline, svetlije ploče/frontovi).
+ * Ikonice + (opciono) auto-generisanje kataloga iz App.Models registra.
+ * Radi i za dinamički dodate dugmiće (MutationObserver).
  */
 (function () {
   // Jedinstvena paleta (usklađena sa postojećim ikonama)
@@ -16,10 +15,9 @@
   // Helper za pravljenje data URI iz SVG stringa
   const S = (svg) => 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 
-  // Piktogrami po tipu
+  // Piktogrami po tipu (uz alias ključeve)
   const ICONS = {
     // === DONJI ELEMENTI / BAZA ===
-    // 3 fioke (koristi i kao generički za base_drawer)
     'drawer_3': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="8" y="8" width="48" height="48" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
       <rect x="12" y="12" width="40" height="12" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
@@ -28,34 +26,29 @@
     </svg>`),
     'base_drawer': 'drawer_3',
 
-    // 2 fioke
     'drawer_2': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="8" y="8" width="48" height="48" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
       <rect x="12" y="14" width="40" height="14" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
       <rect x="12" y="34" width="40" height="14" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
     </svg>`),
 
-    // Kombinacija fioka + vrata
     'combo_drawer_door': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="8" y="8" width="48" height="48" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
       <rect x="12" y="12" width="40" height="14" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
       <rect x="12" y="28" width="40" height="28" fill="${C.dark}"  stroke="${C.line}" stroke-width="1.5"/>
     </svg>`),
 
-    // Jednokrilna baza
     'base_1door': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="8" y="8" width="48" height="48" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
       <rect x="12" y="12" width="40" height="40" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
     </svg>`),
 
-    // Sudopera 1D (gornja ploča naznačena)
     'sink_1door': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="8"  y="8"  width="48" height="48" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
       <rect x="12" y="12" width="40" height="10" fill="${C.dark}"  stroke="${C.line}" stroke-width="1.5"/>
       <rect x="12" y="24" width="40" height="28" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
     </svg>`),
 
-    // Mašine za sudove
     'dishwasher_60': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="10" y="8" width="44" height="48" rx="4" ry="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
       <rect x="14" y="14" width="36" height="16" rx="2" ry="2" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
@@ -72,7 +65,6 @@
       <rect x="14" y="26" width="36" height="26" rx="2" ry="2" fill="${C.dark}"/>
     </svg>`),
 
-    // Kućište rerne
     'oven_housing': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="8"  y="8"  width="48" height="48" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
       <rect x="14" y="16" width="36" height="12" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
@@ -80,7 +72,6 @@
     </svg>`),
     'base_oven_housing': 'oven_housing',
 
-    // Ugradni mali frižider
     'base_small_fridge': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="8" y="8" width="48" height="48" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
       <rect x="14" y="14" width="36" height="16" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
@@ -89,36 +80,30 @@
     </svg>`),
 
     // === GORNJI ELEMENTI / VISEĆI ===
-    // Jednokrilni (koristi se i kao wall_single i wall_1door)
     'wall_1door': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="10" y="10" width="44" height="34" rx="4" fill="${C.panel}" stroke="${C.line}" stroke-width="2"/>
     </svg>`),
     'wall_single': 'wall_1door',
 
-    // Dvokrilni
     'wall_double': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="8"  y="10" width="48" height="34" rx="4" fill="${C.panel}" stroke="${C.line}" stroke-width="2"/>
       <line x1="32" y1="10" x2="32" y2="44" stroke="${C.line}" stroke-width="1.5"/>
     </svg>`),
 
-    // Otvoren (bez fronta)
     'wall_open': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="10" y="10" width="44" height="34" rx="4" fill="#f4f7fb" stroke="${C.line}" stroke-width="2"/>
     </svg>`),
 
-    // Otvorene police
     'wall_open_shelf': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="10" y="10" width="44" height="34" rx="4" fill="#f4f7fb" stroke="${C.line}" stroke-width="2"/>
       <rect x="14" y="22" width="36" height="2" fill="${C.shelf}"/>
       <rect x="14" y="30" width="36" height="2" fill="${C.shelf}"/>
     </svg>`),
 
-    // Ugaoni
     'wall_corner': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <path d="M12 12 H44 a8 8 0 0 1 8 8 V44 H12 Z" fill="${C.panel}" stroke="${C.line}" stroke-width="2"/>
     </svg>`),
 
-    // Aspiratori
     'wall_hood_classic': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="10" y="12" width="44" height="18" rx="3" fill="${C.panel}" stroke="${C.line}" stroke-width="2"/>
       <rect x="18" y="32" width="28" height="12" rx="2" fill="${C.dark}" stroke="${C.line}" stroke-width="1.5"/>
@@ -128,10 +113,17 @@
       <rect x="14" y="28" width="36" height="10" rx="2" fill="${C.dark}"/>
     </svg>`),
 
-    // Visoki dodatak (72), generički (1 ili 2 krila)
+    // Visoki dodaci
     'tall_addon': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="12" y="6" width="40" height="52" rx="4" fill="${C.panel}" stroke="${C.line}" stroke-width="2"/>
       <line x1="32" y1="6" x2="32" y2="58" stroke="${C.line}" stroke-width="1.5" opacity="0.6"/>
+    </svg>`),
+
+    'tall_totem': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect x="14" y="4" width="36" height="56" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
+      <rect x="18" y="8"  width="28" height="22" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
+      <rect x="18" y="34" width="28" height="22" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
+      <line x1="18" y1="30" x2="46" y2="30" stroke="${C.line}" stroke-width="1"/>
     </svg>`)
   };
 
@@ -139,7 +131,9 @@
   function resolveIcon(type) {
     const v = ICONS[type];
     if (!v) return null;
-    return v.startsWith('data:image') ? v : (ICONS[v] || null);
+    return (typeof v === 'string' && !v.startsWith('data:image'))
+      ? (ICONS[v] || null)
+      : v;
   }
 
   function decorate(btn) {
@@ -159,7 +153,7 @@
     btn.classList.add('catalog-item');
 
     const label = document.createElement('div');
-    label.textContent = btn.textContent.trim();
+    label.textContent = btn.textContent.trim() || type;
     label.style.whiteSpace = 'normal';
 
     btn.textContent = '';
@@ -186,9 +180,38 @@
     document.head.appendChild(s);
   }
 
+  // --- NOVO: Auto-populacija kataloga iz registra ako je prazan ---
+  function ensureCatalogPopulated(){
+    const host = document.querySelector('#catalog');
+    if(!host) return;
+    const already = host.querySelector('button[data-type]');
+    if (already) return; // već postoje ručno dodati dugmići
+
+    const hasRegistry = !!(window.App && App.Models && App.Models.list && App.Models.get);
+    if(!hasRegistry) return;
+
+    const entries = (App.Models.catalog && Array.isArray(App.Models.catalog) && App.Models.catalog.length)
+      ? App.Models.catalog.map(e => e.type)
+      : App.Models.list();
+
+    const frag = document.createDocumentFragment();
+    entries.forEach(type=>{
+      const def = App.Models.get(type) || {};
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.type = type;
+      btn.textContent = def.title || type;
+      // (UI handler za klik već hvata #catalog u app.ui.js)
+      frag.appendChild(btn);
+    });
+    host.appendChild(frag);
+  }
+
   window.addEventListener('DOMContentLoaded', () => {
     injectHoverStyles();
-    scanAll();
+    ensureCatalogPopulated();  // ← prvo pokušaj da napraviš dugmad iz registra
+    scanAll();                 // zatim im dodaj ikonice
+
     const cat = document.querySelector('#catalog');
     if (!cat) return;
     const mo = new MutationObserver(() => scanAll());

@@ -95,7 +95,7 @@
     .i-up::before{ content:"▲"; font-size:10px; position:relative; top:-1px; }
     .i-down::before{ content:"▼"; font-size:10px; position:relative; top:1px; }
     .i-del::before{ content:"✕"; font-size:12px; }
-    #lenInfo{ margin-top:6px; padding:6px 8px; background:#0f1726; border:1px solid var(--line); border-radius:8px; color:var(--muted); }
+    #lenInfo{ margin-top:6px; padding:6px 8px; background:#0f1726; border:1px solid var(--line); border-radius:8px; color: var(--muted); }
 
     /* === BUDGET TABLE BEAUTY SKIN === */
     #budget{ overflow:auto; }
@@ -154,8 +154,9 @@
     <div class="toolbar">
       <h1>3xMeri – 1xSeci</h1>
       <div style="flex:1"></div>
-      <button id="btnRun">Recompute</button>
-      <button id="btnReset">Reset</button>
+      <!-- inicijalni tekst usklađen sa app.ui.js koji ih i tako menja -->
+      <button id="btnRun">Save</button>
+      <button id="btnReset">Open</button>
       <button id="btnShot">Screenshot</button>
       <button id="btnOfferPdf">Ponuda (PDF)</button>
     </div>
@@ -341,9 +342,6 @@
   },
   "Order": [
     { "type": "drawer_3", "width": 600 },
-    { "type": "base_1door", "width": 400 },
-    { "type": "sink_1door", "width": 600 },
-    { "type": "dishwasher_60", "width": 600 },
     { "type": "wall_1door", "width": 600 }
   ]
 }</textarea>
@@ -375,20 +373,32 @@
     </section>
   </div>
 
-  <!-- Skripte -->
+  <!-- Skripte (redosled je bitan) -->
   <script src="app.tabs.js?v=1"></script>
   <script src="assets/three.min.js"></script>
+
+  <!-- Core prvo -->
   <script src="app.core.js?v=1"></script>
-  <script src="app.bom.js?v=1"></script>
-  <script src="app.budget.js"></script>
-  <script src="app.open.js"></script>
-  <script src="app.offer.js"></script>
-  <script src="app.ui.catalog.ext.js"></script>
-  <script src="app.ui.catalog.icons.js"></script>
+
+  <!-- Modeli pre kataloga/ikona (da bi auto-populacija radila) -->
   <script src="app.models.js"></script>
   <script src="app.models.hook.js"></script>
-  <script src="viewer3d.nomodule.v6.js"></script>
-  <script src="app.ui.js"></script>
-  <script src="app.fronts.tab.js"></script>
+
+  <!-- BOM/Budget (pre UI) -->
+  <script src="app.bom.js?v=1"></script>
+  <script src="app.budget.js"></script>
+
+  <!-- Katalog (ekstenzije) pa ikonice (koje sada mogu i da auto-populišu ako je katalog prazan) -->
+  
+  <script src="app.ui.catalog.icons.js"></script>
+
+  <!-- UI pre Viewera -->
+	<script src="app.open.js"></script>
+	<script src="app.offer.js"></script>
+	<script src="app.ui.js"></script>
+	<script src="app.ui.catalog.ext.js"></script>
+	<script src="viewer3d.nomodule.v6.js"></script>
+	<script src="app.fronts.tab.js"></script>
+
 </body>
 </html>

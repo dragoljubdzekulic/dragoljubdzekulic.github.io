@@ -156,18 +156,83 @@
     var wallTopY = wallY - wallHForTop * ppm;
 
     var xBase=0, xWall=0;
+    var sharedX = 0; // poslednja zajednička ivica (posle Totema)
+
     (order||[]).forEach(function(it,i){
       var sol = solved[i] || {};
-      var isWall = ((it.type||'')+'').indexOf('wall_')===0;
-      var rowXmm = isWall ? xWall : xBase;
-      var x0 = padX + rowXmm*ppm;
-
-      var yBasePx = isWall ? wallY : floorY;
       var Wmm = Number(it.width||600);
       var Hc  = Number(sol.H_carcass||0);
-
       var typeStr = ((it.type || '') + '').toLowerCase();
-      var isHood  = typeStr.indexOf('aspirator') >= 0 || typeStr.indexOf('hood') >= 0;
+      var isWall = typeStr.indexOf('wall_')===0;
+      var isHood = typeStr.indexOf('aspirator') >= 0 || typeStr.indexOf('hood') >= 0;
+      var isTotem = (typeStr === 'tall_totem');
+
+      // === TOTEM: poravnanje VRHA sa gornjom ivicom visećih (wallTopY), visina do poda
+      if (isTotem) {
+        var rowXmmTotem = Math.max(xBase, xWall);
+        var x0t = padX + rowXmmTotem * ppm;
+
+        var Htot_mm = (floorY - wallTopY) / ppm; // ukupna visina (mm) od poda do gornje ivice visećih
+        var carcYt  = wallTopY;                  // vrh totema TAČNO na gornjoj ivici
+
+        var gT = document.createElementNS(svgns, 'g');
+        var carcT = rect(x0t, carcYt, Wmm*ppm, Htot_mm*ppm, "rgba(255,255,255,0.03)", "#3a4356", 0.6);
+        gT.appendChild(carcT);
+        gT.appendChild(text(x0t+2, carcYt-10, (it.id||'')+" • "+Wmm+"mm", 11, "start", null));
+
+        var accT = 0;
+        var frontsT = (sol.fronts && sol.fronts.length) ? sol.fronts.slice() : [];
+        function drawFrontT(wmm, xOffMm, fhmm, suffix){
+          var yTopPx = carcYt + accT*ppm;
+          var r = rect(x0t + xOffMm*ppm, yTopPx, wmm*ppm, fhmm*ppm, "#dfe5ee", "#202838", 0.8);
+          gT.appendChild(r);
+          var tx = x0t + (xOffMm + wmm/2)*ppm;
+          var ty = yTopPx + (fhmm*ppm)/2;
+          gT.appendChild(text(tx, ty, Math.round(wmm)+"×"+Math.round(fhmm)+"mm"+(suffix||""), 10, "middle", "#111623"));
+        }
+        for (var fiT=0; fiT<frontsT.length; fiT++){
+		  var fhmmT = Number(frontsT[fiT]||0);
+		  var isLast = (fiT === frontsT.length - 1);
+
+		// ako je poslednji front – produži ga do poda
+		if (isLast) {
+		  var remaining = Math.max(0, Htot_mm - accT);
+		  fhmmT = remaining; // “dovuci” donji front do poda
+		}
+
+		if (Number(sol.doors||0)===2){
+		  var centerGapT = 2, eachWT = Math.max(0,(Wmm - centerGapT)/2);
+		  drawFrontT(eachWT, 0, fhmmT, " L");
+		  drawFrontT(eachWT, eachWT+centerGapT, fhmmT, " R");
+		} else {
+		  drawFrontT(Wmm, 0, fhmmT, "");
+		}
+
+		accT += fhmmT;
+		if (!isLast) accT += gapFronts;
+	}
+
+
+        svg.appendChild(gT);
+
+        // vertikalna dimenzija Totema koristi Htot_mm
+        var xDimT = x0t + Wmm*ppm + 14;
+        drawVerticalDim(svg, xDimT, carcYt, carcYt + Htot_mm*ppm, Math.round(Htot_mm)+" mm");
+
+        // pomeri oba kursora (sledeći element — bilo baza ili viseći — „lepi“ se uz Totem)
+        xBase += Wmm + cabGapMm;
+        xWall += Wmm + cabGapMm;
+        sharedX = xBase; // (xBase === xWall)
+        return;
+      }
+
+      // === STANDARDNI ELEMENTI
+      // Catch-up: poravnaj traku koja kasni samo do sharedX (postavljen posle Totema)
+      if (isWall) { if (xWall < sharedX) xWall = sharedX; } else { if (xBase < sharedX) xBase = sharedX; }
+
+      var rowXmm = isWall ? xWall : xBase;
+      var x0 = padX + rowXmm*ppm;
+      var yBasePx = isWall ? wallY : floorY;
 
       var g=document.createElementNS(svgns,'g');
       var carcY = (isWall && isHood) ? wallTopY : (yBasePx - Hc*ppm);
@@ -212,12 +277,17 @@
         drawVerticalDim(svg, xDim, yTop, yBot, Math.round(Hc)+" mm");
       }
 
-      if(isWall) xWall += Wmm + 6; else xBase += Wmm + 6;
+      if(isWall) xWall += Wmm + cabGapMm; else xBase += Wmm + cabGapMm;
     });
 
-    // Total base length
-    var totalBaseWidthMm = (order||[]).filter(function(it){ return ((it.type||'')+'').indexOf('wall_')!==0; })
+    // Total base length (BEZ Totema)
+    var totalBaseWidthMm = (order||[])
+      .filter(function(it){
+        var t = ((it.type||'')+'').toLowerCase();
+        return t.indexOf('wall_')!==0 && t!=='tall_totem';
+      })
       .reduce(function(a,it){ return a + (Number(it.width)||0); }, 0);
+
     var yFloorDim = floorY + 20;
     var xStart = padX;
     var xEnd = padX + totalBaseWidthMm * ppm;
@@ -227,7 +297,10 @@
     var legMm = Number(K.H_plinth!=null ? K.H_plinth : DEFAULT_LEG);
     var topMm = Number(K.T_top!=null ? K.T_top : DEFAULT_TOP);
     var baseSolved = (solved||[]).map(function(s,ii){ return {s:s, it:(order||[])[ii]}; })
-      .filter(function(p){ return p && ((p.it.type||'')+'').indexOf('wall_')!==0; });
+      .filter(function(p){
+        var t = ((p.it.type||'')+'').toLowerCase();
+        return t.indexOf('wall_')!==0 && t!=='tall_totem';
+      });
     var baseHCarcass = 0;
     if (baseSolved.length) baseHCarcass = Number(baseSolved[0].s.H_carcass||0);
     else {
@@ -240,7 +313,6 @@
       var xVert = padX - 25; var y1 = floorY; var y2 = floorY - baseHeightPx;
       drawVerticalDim(svg, xVert, y2, y1, ""); // bez labela na liniji
 
-      // Centrirana donja etiketa, ispod horizontalne dužine
       var Hplinth = Number(K.H_plinth ?? 110);
       var Ttop    = Number(K.T_top ?? 38);
       var Hcar    = Math.max(0, Math.round(totalToCounterMm - Hplinth - Ttop));
@@ -260,15 +332,11 @@
       } catch(e){}
     }
 
-    // (info) maksimalna visina visećih — ostavljeno za dalje potrebe
-    // ...
-
     return svg;
   }
 
   // === Render koji crta i u tab i u #elements (mirror) ===
   function render(cfg, order, solved){
-    // 1) Tab prikaz
     var host = $('#frontsHost'); 
     if(host){
       host.innerHTML='';
@@ -276,7 +344,6 @@
       host.appendChild(svg1);
       var scale = $('#fronts-scale'); if(scale){ scale.textContent = "1 px ~ "+(1/ppm).toFixed(1)+" mm"; }
     }
-    // 2) Mirror u #elements (skriven) — uvek, radi PDF-a
     var mirror = $('#elements');
     if(mirror){
       mirror.innerHTML = '';
