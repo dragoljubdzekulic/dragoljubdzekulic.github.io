@@ -24,14 +24,16 @@ function isDrawerCab(t){ return t==='drawer_3' || t==='drawer_2' || t==='base_dr
 
 // === BROJANJE ELEMENATA ===
 // Ako je dostupno "solutions" (iz Core.solveItem), koristi ga za preciznije brojanje (npr. doors iz res.doors).
+// === BROJANJE ELEMENATA ===
+// Ako je dostupno "solutions" (iz Core.solveItem), koristi ga za preciznije brojanje (npr. doors iz res.doors).
 App.Budget.countByType = function(order, solutions){
   let doors=0, drawers=0, handles=0, baseBoxes=0, wallBoxes=0;
   const arr = Array.isArray(order) ? order : [];
   const solved = Array.isArray(solutions) ? solutions : [];
 
   arr.forEach((it, i)=>{
-    const t=String(it.type||'');
-    const isWall=isWallType(t);
+    const t = String(it.type||'');
+    const isWall = isWallType(t);
     if(isWall) wallBoxes++; else baseBoxes++;
 
     const sol = solved[i] || null;
@@ -56,18 +58,24 @@ App.Budget.countByType = function(order, solutions){
       const nf = Array.isArray(sol?.fronts) ? sol.fronts.length : 3;
       drawers += nf;
     }
+    // ➕ NOVO: sudopera 60 sa full-frontom i 1 dubokom fiokom dole
+    else if (t==='base_sink_fullfront_drawer') {
+      drawers += 1;
+    }
 
     // --- Ručice (handles) ---
     // Heuristika: jedna ručica po frontu (vrata ili fioka)
     // Dishwashers: bar 1 ručka na dekor panelu
     let h=0;
     if (isBaseDishwasher(t)) h += 1;
+
     // vrata → po komadu
     if (Number.isFinite(Number(sol?.doors))) h += Number(sol.doors)||0;
     else {
       if (t==='base_2door' || t==='wall_double') h += 2;
       else if (t==='base_1door' || t==='sink_1door' || t==='wall_1door' || t==='wall_single' || t==='combo_drawer_door') h += 1;
     }
+
     // fioke → po komadu
     if (t==='drawer_3') h += 3;
     else if (t==='drawer_2') h += 2;
@@ -77,6 +85,10 @@ App.Budget.countByType = function(order, solutions){
       const nf = Array.isArray(sol?.fronts) ? sol.fronts.length : 3;
       h += nf;
     }
+    // ➕ NOVO: full-front = 1 ručica (računamo ga kao 1 "front")
+    else if (t==='base_sink_fullfront_drawer') {
+      h += 1;
+    }
 
     handles += h;
     // base_empty_carcass i otvoreni viseći nemaju dodatne ručke
@@ -84,6 +96,7 @@ App.Budget.countByType = function(order, solutions){
 
   return {doors, drawers, handles, baseBoxes, wallBoxes};
 };
+
 
 // === POVRŠINE M2 ===
 App.Budget.sumAreasM2 = function(agg){

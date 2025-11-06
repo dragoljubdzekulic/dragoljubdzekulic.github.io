@@ -31,6 +31,18 @@
       <rect x="12" y="14" width="40" height="14" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
       <rect x="12" y="34" width="40" height="14" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
     </svg>`),
+    'base_sink_fullfront_drawer': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <!-- korpus -->
+      <rect x="8" y="8" width="48" height="48" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>
+      <!-- full-front panel (svetliji okvir preko cele visine) -->
+      <rect x="12" y="12" width="40" height="40" fill="${C.panel}" stroke="${C.line}" stroke-width="1.5"/>
+      <!-- “void” za sudoperu (gornja zona, isprekidano) -->
+      <rect x="14" y="14" width="36" height="16" fill="none" stroke="${C.line}" stroke-width="1" stroke-dasharray="3 2" opacity="0.7"/>
+      <!-- fioka dole (tamni panel) -->
+      <rect x="12" y="38" width="40" height="14" fill="${C.dark}" stroke="${C.line}" stroke-width="1.5"/>
+      <!-- ručkica fioke -->
+      <rect x="26" y="44.5" width="12" height="2" rx="1" fill="${C.line}"/>
+    </svg>`),
 
     'combo_drawer_door': S(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
       <rect x="8" y="8" width="48" height="48" rx="4" fill="${C.body}" stroke="${C.line}" stroke-width="2"/>

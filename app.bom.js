@@ -98,6 +98,82 @@
     } catch(e){
       console.warn('[BOM] model.bom failed for', type, e);
     }
+    // === NOVO: specijalni tip — sudopera 60 sa dubokom fiokom i full-frontom ===
+    if (tLow === 'base_sink_fullfront_drawer') {
+      const rows = [];
+
+      const W_total = mm(it?.width ?? sol?.width ?? 600);
+      const thFront = nz(K?.FrontThickness ?? 18);
+      const t       = nz(WDEF.SideThickness ?? 18) || 18;
+
+      // dubina (kao i generički)
+      const d = mm(it?.depth ?? sol?.depth ?? WDEF.CarcassDepth ?? 560);
+
+      // visina korpusa (bez sokle)
+      const H = mm(sol.H_carcass ?? (it?.height ?? (K?.Base?.H_carcass ?? 720)));
+
+      // unutrašnja širina
+      const netW = mm(W_total - 2*t);
+
+      // --- KORPUS ---
+      if (d > 0 && H > 0) {
+        rows.push(normalizeRow({ itemId: it.id, part:"BOK-L", qty:1, w:d, h:H, th:t, edge:EDGE.CARCASS_SIDE,   material:MAT.CARCASS, notes:"korpus" }));
+        rows.push(normalizeRow({ itemId: it.id, part:"BOK-R", qty:1, w:d, h:H, th:t, edge:EDGE.CARCASS_SIDE,   material:MAT.CARCASS, notes:"korpus" }));
+      }
+      if (netW > 0 && d > 0) {
+        rows.push(normalizeRow({ itemId: it.id, part:"DNO",   qty:1, w:netW, h:d, th:t, edge:EDGE.CARCASS_PLATE, material:MAT.CARCASS, notes:"korpus" }));
+      }
+
+      const connDepth = mm(
+        nz(sol.topConnectorDepth) ||
+        nz(it?.topConnectorDepth) ||
+        nz(K?.Defaults?.TopConnectorDepth) || 80
+      );
+      if (netW > 0 && connDepth > 0) {
+        rows.push(normalizeRow({ itemId: it.id, part:"VEZNA-FRONT", qty:1, w:netW, h:connDepth, th:t, edge:EDGE.CARCASS_PLATE, material:MAT.CARCASS, notes:"korpus" }));
+        rows.push(normalizeRow({ itemId: it.id, part:"VEZNA-BACK",  qty:1, w:netW, h:connDepth, th:t, edge:EDGE.CARCASS_PLATE, material:MAT.CARCASS, notes:"korpus" }));
+		rows.push(normalizeRow({ itemId: it.id, part:"LEDJA", qty:1, w:netW, h:H, th: nz(WDEF.BackThickness ?? 8), edge:"", material:(C?.Materials?.BACK || "HDF3"), notes:"korpus" }));
+      }
+
+      // --- FRONT (puna visina, širina = W_total - 4) ---
+      const wf = mm(W_total - 4);
+      if (wf > 0 && H > 0) {
+        rows.push(normalizeRow({
+          itemId: it.id,
+          part: "FRONT-FULL",
+          qty: 1,
+          w: wf,
+          h: H,
+          th: thFront,
+          edge: EDGE.FRONT,
+          material: MAT.FRONT,
+          notes: "front"
+        }));
+      }
+
+      // --- FIOKA (duboka, dole) ---
+      const Dstd  = Math.min( nz(K?.Drawer?.DepthStd ?? 500), nz(d) );
+      const slide = nz(K?.Drawer?.SlideAllowance ?? 26);
+      const tD    = t;
+
+      const Wclear_raw = W_total - slide - 2*t;
+      const Wrail_raw  = Wclear_raw - 2*tD;
+      const Wclear = mm(clamp(Wclear_raw, 80, 2000));
+      const Wrail  = mm(clamp(Wrail_raw,  40, 2000));
+
+      const drawerFrontH = mm(Math.max(260, Math.round(H * 0.35)));
+      const sideH        = mm(Math.max(90, drawerFrontH - 40));
+
+      if (Dstd > 0 && sideH > 0) {
+        rows.push(normalizeRow({ itemId: it.id, part:"DF-BOK-L-1",   qty:1, w:Dstd,   h:sideH, th:tD, edge:"", material:MAT.CARCASS,        notes:"fioka" }));
+        rows.push(normalizeRow({ itemId: it.id, part:"DF-BOK-R-1",   qty:1, w:Dstd,   h:sideH, th:tD, edge:"", material:MAT.CARCASS,        notes:"fioka" }));
+        rows.push(normalizeRow({ itemId: it.id, part:"DF-LEDJA-1",   qty:1, w:Wrail,  h:sideH, th:tD, edge:"", material:MAT.CARCASS,        notes:"fioka" }));
+        rows.push(normalizeRow({ itemId: it.id, part:"DF-PREDNJA-1", qty:1, w:Wrail,  h:sideH, th:tD, edge:"", material:MAT.CARCASS,        notes:"fioka" }));
+        rows.push(normalizeRow({ itemId: it.id, part:"DF-DNO-1",     qty:1, w:Wclear, h:Dstd,  th:3,  edge:"", material:MAT.DRAWER_BOTTOM, notes:"fioka" }));
+      }
+
+      return rows;
+    }
 
     // ---- Fallback BOM (generički) ----
     const out = [];

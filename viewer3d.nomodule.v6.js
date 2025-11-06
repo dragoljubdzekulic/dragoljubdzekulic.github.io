@@ -378,24 +378,52 @@
         } else { addFront(W, W/2, fhm); }
 
         // vizuelizacija fioka (određeni tipovi)
-        const hasDrawers = (it.type==='drawer_3' || it.type==='combo_drawer_door' || it.type==='oven_housing');
-        const isThisFrontDrawer = (
-          (it.type==='drawer_3') ||
-          (it.type==='combo_drawer_door' && fi===0) ||
-          (it.type==='oven_housing' && fi===1)
-        );
-        if(hasDrawers && isThisFrontDrawer){
-          const tmm = ((KC.Defaults?.SideThickness)||18)*MM;
-          const Dstd = Math.min(((KC.Drawer?.DepthStd)||500)*MM, D);
-          const slide = ((KC.Drawer?.SlideAllowance)||26)*MM;
-          const clearW = Math.max(0.05, W - 2*tmm - slide);
-          const sideH = Math.max(0.09, (fh-40)*MM);
-          const zBox  = D - Dstd/2 - 0.01;
-          const dbox = new THREE.Mesh(new THREE.BoxGeometry(clearW, sideH, Dstd), matDrawer);
-          dbox.position.set(W/2, (Hc - (acc + fhm/2)), zBox);
-          dbox.userData._isDrawer = true; dbox.userData._zBase = zBox;
-          g.add(dbox); addOutline(dbox, 0x6ea8ff);
-        }
+const isFF = (it.type === 'base_sink_fullfront_drawer');
+const hasDrawers = (
+  it.type==='drawer_3' ||
+  it.type==='combo_drawer_door' ||
+  it.type==='oven_housing' ||
+  isFF
+);
+
+// koji front nosi fioku?
+const isThisFrontDrawer = (
+  (it.type==='drawer_3') ||
+  (it.type==='combo_drawer_door' && fi===0) ||
+  (it.type==='oven_housing' && fi===1) ||
+  (isFF && fi===0)              // full-front ima samo jedan front → index 0
+);
+
+if (hasDrawers && isThisFrontDrawer){
+  const tmm   = ((KC.Defaults?.SideThickness)||18)*MM;
+  const Dstd  = Math.min(((KC.Drawer?.DepthStd)||500)*MM, D);
+  const slide = ((KC.Drawer?.SlideAllowance)||26)*MM;
+  const clearW = Math.max(0.05, W - 2*tmm - slide);
+
+  // default: visina fioke ≈ visina aktuelnog fronta
+  let drawerH = fhm;
+  // y-centar fioke (po difoltu centar aktuelnog fronta)
+  let yCenter = (Hc - (acc + fhm/2));
+
+  // specijalni slučaj: sudopera full-front + jedna donja fioka
+  if (isFF){
+    // 35% visine korpusa, ograničeno na 260–400 mm
+    drawerH = Math.max(0.26, Math.min(0.40, Hc * 0.35));
+    // pozicioniraj je pri dnu korpusa (malo iznad dna)
+    const t = 0.018; // 18 mm
+    yCenter = drawerH/2 + t;
+  }
+
+  // stranice niže od fronta ~40mm (klizači/dno)
+  const sideH = Math.max(0.09, drawerH - 0.04);
+
+  const zBox  = D - Dstd/2 - 0.01;
+  const dbox = new THREE.Mesh(new THREE.BoxGeometry(clearW, sideH, Dstd), matDrawer);
+  dbox.position.set(W/2, yCenter, zBox);
+  dbox.userData._isDrawer = true; dbox.userData._zBase = zBox;
+  g.add(dbox); addOutline(dbox, 0x6ea8ff);
+}
+
 
         acc += fhm;
         if (fi < (frontsToRender.length-1)) acc += gap;

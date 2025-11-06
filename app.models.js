@@ -357,6 +357,103 @@
   });
   // sink_1door (alias): ako želiš da sudopera NEMA police, javi pa ću override-ovati shelvesCount=0.
   App.Models.register("sink_1door", App.Models.get("base_1door"));
+  
+// Donji element za sudoperu 600: full-front + duboka fioka dole
+// Donji element za sudoperu 600: full-front + duboka fioka dole
+App.Models.register("base_sink_fullfront_drawer", {
+  title: "Sudopera 60 — fioka dole (full front)",
+  defaults: { width: 600, depth: 560, gap: 2 },
+
+  solve(k, it) {
+    const H   = getHCarcass(k, it);
+    const W   = Number(it?.width ?? 600);
+    const dep = defaultDepth(it);
+
+    const drawerFrontH = Math.max(260, Math.round(H * 0.35));
+
+    return {
+      H_carcass: H,
+      fronts: [H],           // full-front (zbog kompatibilnosti)
+      gaps: [],
+      notes: [],
+      width: W,
+      depth: dep,
+
+      // hintovi za 3D i Budget/BOM
+      drawers: 1,
+      drawerFrontH,
+      frontSegments: [
+        { h: drawerFrontH,       kind: "drawer" },  // donji deo – fioka
+        { h: H - drawerFrontH,   kind: "void"   }   // gornji deo – sudopera
+      ]
+    };
+  },
+
+  bom(it, sol, C) {
+    const cfg = C || (App.State?.get?.() || {});
+    const K   = (cfg.Kitchen || cfg.kitchen || {});
+    const t   = Number(K?.Defaults?.SideThickness ?? 18);
+    const tb  = Number(K?.Defaults?.BackThickness ?? 8);
+    const slide = Number(K?.Drawer?.SlideAllowance ?? 26);
+
+    const W   = Number(it?.width  ?? 600);
+    const H   = Number(sol?.H_carcass ?? it?.height ?? getHCarcass(K, it));
+    const D   = Number(it?.depth  ?? defaultDepth(it));
+
+    const MAT = {
+      CARCASS: (cfg?.Materials?.CARCASS ?? "PB18_White"),
+      FRONT:   (cfg?.Materials?.FRONT   ?? "MDF_Lak"),
+      BACK:    (cfg?.Materials?.BACK    ?? "HDF8"),
+      DRAWER_BOTTOM: (cfg?.Materials?.DRAWER_BOTTOM ?? "HDF3")
+    };
+    const EDGE = {
+      CARCASS_SIDE:  (cfg?.Edges?.CARCASS_SIDE  ?? "2L"),
+      CARCASS_PLATE: (cfg?.Edges?.CARCASS_PLATE ?? "2S"),
+      FRONT:         (cfg?.Edges?.FRONT         ?? "2L+2S")
+    };
+
+    const netW       = Math.max(0, Math.round(W - 2*t));
+    const wFront     = Math.max(0, Math.round(W - 4)); // luft 2+2
+    const connDepth  = Number(it?.topConnectorDepth ?? K?.Defaults?.TopConnectorDepth ?? 80);
+
+    const drawerFrontH = Math.max(260, Math.round(H * 0.35));
+    const drawerSideH  = Math.max(90,  drawerFrontH - 40);
+    const drawerD      = Math.max(0, Math.min(D, Number(K?.Drawer?.DepthStd ?? 500)));
+    const innerClear   = Math.max(0, W - slide - 2*t);
+    const railClear    = Math.max(0, innerClear - 2*t);
+
+    const rows = [
+      { part:"BOK-L", qty:1, w:D,    h:H, th:t,  edge:EDGE.CARCASS_SIDE,  material:MAT.CARCASS, notes:"korpus" },
+      { part:"BOK-R", qty:1, w:D,    h:H, th:t,  edge:EDGE.CARCASS_SIDE,  material:MAT.CARCASS, notes:"korpus" },
+      { part:"DNO",   qty:1, w:netW, h:D, th:t,  edge:EDGE.CARCASS_PLATE, material:MAT.CARCASS, notes:"korpus" },
+
+      { part:"VEZNA-FRONT", qty:1, w:netW, h:connDepth, th:t, edge:EDGE.CARCASS_PLATE, material:MAT.CARCASS, notes:"korpus" },
+      { part:"VEZNA-BACK",  qty:1, w:netW, h:connDepth, th:t, edge:EDGE.CARCASS_PLATE, material:MAT.CARCASS, notes:"korpus" },
+
+      { part:"LEDJA", qty:1, w:netW, h:H, th:tb, edge:"", material:MAT.BACK, notes:"korpus" },
+
+      { part:"FRONT-FULL", qty:1, w:wFront, h:H, th:Number(K?.FrontThickness ?? 18),
+        edge:EDGE.FRONT, material:MAT.FRONT, notes:"front" },
+
+      { part:"DF-BOK-L-1",   qty:1, w:drawerD,    h:drawerSideH, th:t, edge:"", material:MAT.CARCASS,       notes:"fioka" },
+      { part:"DF-BOK-R-1",   qty:1, w:drawerD,    h:drawerSideH, th:t, edge:"", material:MAT.CARCASS,       notes:"fioka" },
+      { part:"DF-LEDJA-1",   qty:1, w:railClear,  h:drawerSideH, th:t, edge:"", material:MAT.CARCASS,       notes:"fioka" },
+      { part:"DF-PREDNJA-1", qty:1, w:railClear,  h:drawerSideH, th:t, edge:"", material:MAT.CARCASS,       notes:"fioka" },
+      { part:"DF-DNO-1",     qty:1, w:innerClear, h:drawerD,     th:3, edge:"", material:MAT.DRAWER_BOTTOM, notes:"fioka" }
+    ];
+
+    return rows.map(r => ({
+      itemId: it.id || "",
+      ...r,
+      w: Math.max(1, Math.round(r.w)),
+      h: Math.max(1, Math.round(r.h)),
+      th: Math.max(1, Math.round(r.th)),
+      edge: r.edge || "",
+      material: r.material || ""
+    }));
+  }
+});
+
 
   // base_2door → donji dvokrilni SA policama
   App.Models.register("base_2door", {
@@ -442,6 +539,7 @@
    * ========================= */
   App.Models.catalog = [
     { type: "base_drawer", variants: ["1M2S","2M1V","2V","4M"] },
+    { type: "base_sink_fullfront_drawer" }, // ← DODATO
     { type: "base_dishwasher_full" },
     { type: "base_dishwasher_half" },
     { type: "base_oven_housing" },
@@ -456,5 +554,6 @@
     { type: "tall_addon", opts: [{H:720, doors:"single"}, {H:720, doors:"double"}] },
     { type: "tall_totem", opts: [{variant:"fridge"},{variant:"oven"}] }
   ];
+
 
 })();

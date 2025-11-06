@@ -588,23 +588,7 @@
       mo.observe(budgetHost, { childList:true, subtree:true });
     }
 
-    // Ručni "Reset 3D" na postojeće dugme #btnShot
-    const btnShot = document.getElementById('btnShot');
-    if (btnShot){
-      btnShot.title = 'Reset 3D';
-      btnShot.textContent = 'Reset 3D';
-      btnShot.onclick = ()=>{
-        try{
-          __lastRenderIds = new Set();               // zaboravi stare
-          resetViewerIfNeeded([]);                   // natera clear/reset
-          const cfg = getConfig();
-          const order = (window.builder||[]);
-          if (typeof Viewer3D?.render === 'function'){
-            Viewer3D.render(order, cfg, window.__lastSolved||[]);
-          }
-        }catch(e){ console.warn('manual 3D reset fail', e); }
-      };
-    }
+    
 
     function initAfterCore(){
       if (window.App?.Core && typeof window.App.Core.solveItem === 'function'){
