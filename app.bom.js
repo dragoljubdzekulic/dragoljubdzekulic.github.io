@@ -1,10 +1,11 @@
-/* HSPLIT v2.1 — app.bom.js
- * 3xMeri — BOM + CSV + Rendering
- * Changelog (v2.1):
- * - BOM sada poštuje solve: donji elementi imaju dve vezne ploče umesto TOP
- * - Police se generišu iz sol.shelves (+ shelf_thickness)
- * - Ako nema sol, uzima se iz App.Core.solveItem(cfg, it)
- * - Integracija sa App.Models: koristi model.bom(it, sol, cfg) kad postoji
+/* HSPLIT v2.2 — app.bom.js
+ * 3xMeri — BOM + CSV + Rendering + Cutting List
+ * Changelog (v2.2):
+ * - Krojna lista (toCuttingList) sa korekcijom za trake (L/S)
+ * - CSV export za krojnu listu (toCuttingCSV)
+ * - Zadržano (v2.1): donji elementi imaju dve vezne umesto TOP, police iz sol.shelves
+ * - Ako nema sol, poziva se App.Core.solveItem(cfg, it)
+ * - Ako postoji App.Models.get(type).bom, koristi se njegov BOM
  */
 
 (function(){
@@ -14,25 +15,30 @@
   window.App = window.App || {};
   App.BOM = App.BOM || {};
 
-  // ---- Materijali / ivice (mogu se prepisati iz cfg.Materials / cfg.Edges) ----
+  // ---- Materijali / ivice (preuzimanje iz cfg) ----
   function getMaterials(cfg){
     const m = cfg?.Materials || {};
     return {
       FRONT:         m.FRONT         || "MDF_Lak",
       CARCASS:       m.CARCASS       || "PB18_White",
-      DRAWER_BOTTOM: m.DRAWER_BOTTOM || "HDF3"
+      DRAWER_BOTTOM: m.DRAWER_BOTTOM || "HDF3",
+      // dodatno: očekujemo opciono m.<NAME>.grain = 'none' | 'long'
+      _grainOf: (name)=> (m?.[name]?.grain ?? 'none')
     };
   }
   function getEdges(cfg){
     const e = cfg?.Edges || {};
     return {
-      FRONT:         e.FRONT         || "2L+2S",
-      CARCASS_SIDE:  e.CARCASS_SIDE  || "2L",
-      CARCASS_PLATE: e.CARCASS_PLATE || "2S"
+      FRONT:               e.FRONT               || "2L+2S",
+      CARCASS_SIDE:        e.CARCASS_SIDE        || "2L",
+      CARCASS_PLATE:       e.CARCASS_PLATE       || "2S",
+      ShelfEdge:           e.ShelfEdge           || "1L",
+      CarcassTapeThickness: Number(e.CarcassTapeThickness ?? 0.6), // mm
+      FrontTapeThickness:   Number(e.FrontTapeThickness   ?? 1.0)  // mm (ako treba odvojeno)
     };
   }
 
-  // Mali pomoćnici
+  // ---- Helpers ----
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const mm    = v => Math.round(Number(v)||0);
   const nz    = v => Number(v)||0;
@@ -50,6 +56,15 @@
       material: String(r.material ?? ""),
       notes:    String(r.notes ?? "")
     };
+  }
+
+  // Edge parser: "1L+2S" -> {L:1,S:2}
+  function parseEdge(code){
+    const out = { L:0, S:0 };
+    if(!code) return out;
+    const mL = String(code).match(/(\d+)\s*L/i); if(mL) out.L = +mL[1];
+    const mS = String(code).match(/(\d+)\s*S/i); if(mS) out.S = +mS[1];
+    return out;
   }
 
   // ---- Glavni BOM za jedan element ----
@@ -132,7 +147,7 @@
     // top vs dve vezne ploče
     const hasTopConnectors = (sol.hasTopConnectors === true) || (isBase && true);
     if (isWall && !hasTopConnectors) {
-      // zidni → TOP-W kao i do sada
+      // zidni → TOP-W
       if (netW > 0 && d > 0) {
         out.push(normalizeRow({ itemId: it.id, part:"TOP-W", qty:1, w:netW, h:d, th:t, edge:EDGE.CARCASS_PLATE, material:MAT.CARCASS, notes:"korpus" }));
       }
@@ -150,24 +165,37 @@
       }
     }
 
-    // POLICE — iz solve.shelves (augmentirano u models.hook)
-    const shelfCount = Array.isArray(sol.shelves) ? sol.shelves.length : 0;
-    const shelfTh = mm(sol.shelf_thickness ?? it?.shelf_thickness ?? 18);
-    if (shelfCount > 0 && netW > 0 && d > 0) {
-      for (let i = 0; i < shelfCount; i++) {
-        out.push(normalizeRow({
-          itemId: it.id,
-          part: isWall ? `POLICA-W-${i+1}` : `POLICA-${i+1}`,
-          qty: 1,
-          w: netW,
-          h: d,
-          th: shelfTh,
-          edge: EDGE.CARCASS_PLATE,
-          material: MAT.CARCASS,
-          notes: "polica"
-        }));
-      }
-    }
+// POLICE — iz solve.shelves (augmentirano u models.hook)
+const shelfCount = Array.isArray(sol.shelves) ? sol.shelves.length : 0;
+const shelfTh = mm(sol.shelf_thickness ?? it?.shelf_thickness ?? (WDEF.ShelfThickness ?? t));
+
+if (shelfCount > 0 && netW > 0 && d > 0) {
+  const shelfEdge = EDGE.ShelfEdge || EDGE.CARCASS_PLATE;
+
+  // Unutrašnje mere police (pre krojne trake):
+  const backTh   = nz(WDEF.BackThickness ?? 8);
+  const doorGap  = nz(WDEF.DoorGap ?? 2);
+  const cX       = nz(WDEF.ShelfClearanceX ?? 2); // luft levo/desno ukupno
+  const cY       = nz(WDEF.ShelfClearanceY ?? 2); // luft napred/nazad ukupno
+
+  const innerW = mm(Math.max(0, netW - cX));                 // W_total - 2*t - luft
+  const innerD = mm(Math.max(0, d - backTh - doorGap - cY)); // d - leđa - gap - luft
+
+  for (let i = 0; i < shelfCount; i++) {
+    out.push(normalizeRow({
+      itemId: it.id,
+      part: isWall ? `POLICA-W-${i+1}` : `POLICA-${i+1}`,
+      qty: 1,
+      w: innerW,
+      h: innerD,
+      th: shelfTh,
+      edge: shelfEdge,            // npr. '1L' → krojna H će biti umanjena za traku
+      material: MAT.CARCASS,
+      notes: "polica"
+    }));
+  }
+}
+
 
     // FIJOKE — prepoznaj ladičare (i alias-e)
     const hasDrawers =
@@ -263,7 +291,7 @@
     return [header, ...lines].join('\n');
   };
 
-  // Render u tabelu
+  // Render u tabelu (BOM)
   App.BOM.renderBOM = function(rows){
     const el = $q("#bom");
     if (!el) return;
@@ -306,6 +334,141 @@
     const ta = $q("#csvRaw");
     if (!ta) return;
     const csv = App.BOM.toCSV(Array.isArray(rows) ? rows : []);
+    ta.value = csv;
+  };
+
+  /* =========================================================
+   *                 KROJNA LISTA (CUTTING LIST)
+   * ========================================================= */
+
+  // Iz jednog BOM reda napravi korektovan "cut" red uzimajući u obzir trake
+  function toCutRow(r, cfg){
+    const MAT = getMaterials(cfg);
+    const EDGE = getEdges(cfg);
+
+    // debljina trake po materijalu
+    const tape = (r.material === (cfg?.Materials?.FRONT || "MDF_Lak"))
+      ? EDGE.FrontTapeThickness
+      : EDGE.CarcassTapeThickness;
+
+    const e = parseEdge(r.edge);
+    const w0 = Math.max(0, Number(r.w)||0);
+    const h0 = Math.max(0, Number(r.h)||0);
+
+    // odredi dužu/kratku stranu
+    const longIsW = (w0 >= h0);
+    const long0   = longIsW ? w0 : h0;
+    const short0  = longIsW ? h0 : w0;
+
+    // smanji dužu za L*tape, kratku za S*tape
+    const longCut  = Math.max(0, long0  - e.L * tape);
+    const shortCut = Math.max(0, short0 - e.S * tape);
+
+    const cutW = longIsW ? longCut  : shortCut;
+    const cutH = longIsW ? shortCut : longCut;
+
+    // rotacija: zabranjena ako materijal ima šaru/grain='long'
+    const grain = MAT._grainOf(r.material);
+    const rot = (grain === 'none'); // PB: može, MDF sa šarom: ne
+
+    return {
+      material: r.material,
+      th: Number(r.th)||0,
+      w: +cutW.toFixed(1),
+      h: +cutH.toFixed(1),
+      qty: Number(r.qty)||0,
+      rot,
+      // servisna polja (nisu obavezna u CSV):
+      part: r.part,
+      sourceEdge: r.edge,
+      itemId: r.itemId || "",
+      notes: r.notes || ""
+    };
+  }
+
+  // Krojna lista iz BOM-a (filtrira neupotrebljive, primenjuje trake, grupiše)
+  App.BOM.toCuttingList = function(rows, cfg){
+    const safe = (Array.isArray(rows)? rows: []).filter(r =>
+      r && r.material && (r.w>0) && (r.h>0) && (r.qty>0)
+    );
+
+    const cutRows = safe.map(r => toCutRow(r, cfg));
+
+    // Grupisanje po (material|th|w|h|rot)
+    const map = new Map();
+    for(const r of cutRows){
+      const key = [r.material, r.th, r.w, r.h, r.rot?'R':'N'].join('|');
+      const prev = map.get(key);
+      if (prev) prev.qty += r.qty;
+      else map.set(key, {...r});
+    }
+
+    // sortiraj (materijal → th → h (duža) → w)
+    return Array.from(map.values()).sort((a,b)=>{
+      if(a.material!==b.material) return a.material.localeCompare(b.material);
+      if(a.th!==b.th) return a.th-b.th;
+      if(Math.max(a.w,a.h)!==Math.max(b.w,b.h)) return Math.max(b.w,b.h)-Math.max(a.w,a.h);
+      return Math.min(b.w,b.h)-Math.min(a.w,a.h);
+    });
+  };
+
+  // CSV krojne liste
+  // Kolone: material,th,w,h,qty,rot
+  App.BOM.toCuttingCSV = function(cutRows){
+    const safe = Array.isArray(cutRows) ? cutRows : [];
+    if (!safe.length) return "";
+
+    const cols = ["material","th","w","h","qty","rot"];
+    const esc = v => `"${String(v).replace(/"/g,'""')}"`;
+    const header = cols.join(',');
+    const lines = safe.map(r=>cols.map(c=>{
+      let v = r[c];
+      if (c==="rot") v = r.rot ? "yes" : "no";
+      return esc(v ?? "");
+    }).join(','));
+    return [header, ...lines].join('\n');
+  };
+
+  // Render krojne liste u #cutting (opciono)
+  App.BOM.renderCutting = function(cutRows){
+    const el = $q("#cutting");
+    if (!el) return;
+    const safe = Array.isArray(cutRows) ? cutRows : [];
+    el.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+          <thead>
+            <tr style="background: var(--panel); border-bottom:2px solid var(--line);">
+              <th style="padding:8px; text-align:left;">Material</th>
+              <th style="padding:8px; text-align:right;">TH</th>
+              <th style="padding:8px; text-align:right;">W</th>
+              <th style="padding:8px; text-align:right;">H</th>
+              <th style="padding:8px; text-align:right;">Qty</th>
+              <th style="padding:8px; text-align:left;">Rot</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${safe.map(r=>`
+              <tr style="border-bottom:1px solid var(--line);">
+                <td style="padding:6px 8px;">${r.material}</td>
+                <td style="padding:6px 8px; text-align:right;">${r.th}</td>
+                <td style="padding:6px 8px; text-align:right;">${r.w}</td>
+                <td style="padding:6px 8px; text-align:right;">${r.h}</td>
+                <td style="padding:6px 8px; text-align:right;">${r.qty}</td>
+                <td style="padding:6px 8px;">${r.rot ? "yes" : "no"}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  // Popuna CSV preview textarea (#cutCSV)
+  App.BOM.renderCuttingCSVPreview = function(cutRows){
+    const ta = $q("#cutCSV");
+    if (!ta) return;
+    const csv = App.BOM.toCuttingCSV(Array.isArray(cutRows) ? cutRows : []);
     ta.value = csv;
   };
 
